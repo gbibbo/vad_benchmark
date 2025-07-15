@@ -22,7 +22,5 @@ This repo provides code and resources for benchmarking privacy‑focused voice a
 
 ---
 
-Insert the image below to illustrate “Under Construction”:
-
 ![Under Construction](image.png)
 
