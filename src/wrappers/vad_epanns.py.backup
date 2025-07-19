@@ -18,8 +18,8 @@ if epanns_path not in sys.path:
     sys.path.insert(0, epanns_path)
 
 # Importar de los archivos existentes
-from models.epanns import Cnn14_pruned
-from models.epanns import move_data_to_device
+from models import Cnn14_pruned
+from utils import move_data_to_device
 
 # Importar AudioModelInference manualmente para evitar imports relativos
 import torch

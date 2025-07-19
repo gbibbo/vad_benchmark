@@ -1,0 +1,26 @@
+project:
+  base_path: .
+
+test_settings:
+  max_files: 1
+  thresholds: [0.3, 0.5, 0.7]
+
+models:
+  silero:
+    wrapper: src.wrappers.vad_silero
+    vad_type: probabilistic  
+    enabled: true
+    
+  webrtc:
+    wrapper: src.wrappers.vad_webrtc
+    enabled: true
+    
+  whisper_tiny:
+    wrapper: src.wrappers.vad_whisper_tiny
+    enabled: true
+
+scenarios:
+  demo_test:
+    description: "Demo test with sample audio"
+    chunks_path: test_data/chunks
+    ground_truth: test_data/ground_truth.csv
