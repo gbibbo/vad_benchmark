@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+vad_benchmark/
+
+# Large files
+models/*/checkpoint*.pt
+models/*/Cnn14_*
+models/*/*.pth
+models/*/*.bin
+datasets/
+results/
+*.wav
+*.mp3
+
+# Logs and temp
+logs/
+*.log
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/

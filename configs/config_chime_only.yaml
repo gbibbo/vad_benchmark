@@ -1,0 +1,63 @@
+project:
+  base_path: /mnt/fast/nobackup/users/gb0048/vad_chime_gpu_20250703_181054
+
+test_settings:
+  max_files: 2
+  thresholds:
+    - 0.0
+    - 0.1
+    - 0.2
+    - 0.3
+    - 0.5
+    - 0.8
+
+scenarios:
+  chime_cmf:
+    description: "CHiME: c,m,f = speech"
+    chunks_path: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/chime/chunks
+    ground_truth: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/chime/ground_truth/cmf.csv
+
+models:
+  # MODELOS QUE FUNCIONARON
+  silero:
+    wrapper: src.wrappers.vad_silero
+    vad_type: probabilistic  
+    enabled: true
+    
+  passt:
+    wrapper: src.wrappers.vad_passt
+    vad_type: probabilistic
+    enabled: true
+
+  webrtc:
+    wrapper: src.wrappers.vad_webrtc
+    enabled: true
+    
+  whisper_tiny:
+    wrapper: src.wrappers.vad_whisper_tiny
+    enabled: true
+    
+  whisper_small:
+    wrapper: src.wrappers.vad_whisper_small
+    enabled: true
+    
+  panns:
+    wrapper: src.wrappers.vad_panns
+    vad_type: probabilistic  
+    enabled: true
+
+  ast:
+    wrapper: src.wrappers.vad_ast
+    vad_type: probabilistic
+    enabled: true
+    
+  # MODELOS ARREGLADOS
+  qwen2_audio:
+    wrapper: src.wrappers.vad_qwen_working  # 🔧 Wrapper arreglado
+    vad_type: binary
+    enabled: true
+
+  pengi:
+    wrapper: src.wrappers.vad_pengi_fixed   # 🔧 Wrapper silenciado
+    vad_type: probabilistic
+    enabled: true

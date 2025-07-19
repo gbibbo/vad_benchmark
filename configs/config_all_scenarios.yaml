@@ -1,0 +1,83 @@
+project:
+  base_path: /mnt/fast/nobackup/users/gb0048/vad_chime_gpu_20250703_181054
+
+# CONFIGURACIÓN GLOBAL (aplicada a todos los escenarios)
+test_settings:
+  max_files: 2 #102000
+  thresholds: [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0]
+
+# TODOS LOS MODELOS (agregar nuevos aquí)
+models:
+  silero:
+    wrapper: src.wrappers.vad_silero
+    vad_type: probabilistic  
+    enabled: false
+    
+  webrtc:
+    wrapper: src.wrappers.vad_webrtc
+    enabled: false
+    
+  whisper_tiny:
+    wrapper: src.wrappers.vad_whisper_tiny
+    enabled: false
+    
+  whisper_small:
+    wrapper: src.wrappers.vad_whisper_small
+    enabled: false
+    
+  panns:
+    wrapper: src.wrappers.vad_panns
+    vad_type: probabilistic  
+    enabled: false
+
+  epanns:
+    wrapper: src.wrappers.vad_epanns
+    vad_type: probabilistic  
+    enabled: false
+
+  ast:
+    wrapper: src.wrappers.vad_ast
+    vad_type: probabilistic
+    chunk_size: 1024      # si lo necesitas
+    enabled: false
+    
+  passt:
+    wrapper: src.wrappers.vad_passt
+    vad_type: probabilistic      # genera probabilidad ∈ [0,1]
+    enabled: false
+
+  qwen2_audio:
+    wrapper: src.wrappers.vad_qwen_optimized
+    vad_type: binary          # devuelve 0 / 1
+    enabled: true
+    requirement: transformers==4.45.0 
+
+  # MODELOS ADICIONALES (habilitar cuando estén listos)
+
+  pengi:
+    wrapper: src.wrappers.vad_pengi
+    vad_type: probabilistic
+    enabled: false
+    requirement: transformers==4.30.0 
+
+# DEFINICIÓN DE ESCENARIOS
+scenarios:
+  chime_cmf:
+    description: "CHiME: c,m,f = speech"
+    chunks_path: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/chime/chunks
+    ground_truth: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/chime/ground_truth/cmf.csv
+    
+  chime_cmfv:
+    description: "CHiME: c,m,f,v = speech"
+    chunks_path: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/chime/chunks
+    ground_truth: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/chime/ground_truth/cmfv.csv
+    
+  #musan_speech_only:
+  #  description: "MUSAN: Solo Speech = speech"
+  #  chunks_path: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/musan/chunks_4s
+  #  ground_truth: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/musan/gt_musan_speech_only.csv
+    
+  #musan_speech_music:
+  #  description: "MUSAN: Speech + Music = speech"
+  #  chunks_path: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/musan/chunks_4s
+  #  ground_truth: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/musan/gt_musan_speech_music.csv

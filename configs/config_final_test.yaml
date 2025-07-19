@@ -1,0 +1,40 @@
+project:
+  base_path: /mnt/fast/nobackup/users/gb0048/vad_temp_github
+
+test_settings:
+  max_files: 2
+  thresholds: [0.3, 0.5, 0.7]
+
+models:
+  silero:
+    wrapper: src.wrappers.vad_silero
+    vad_type: probabilistic  
+    enabled: true
+    
+  webrtc:
+    wrapper: src.wrappers.vad_webrtc
+    enabled: true
+    
+  whisper_tiny:
+    wrapper: src.wrappers.vad_whisper_tiny
+    enabled: true
+    
+  whisper_small:
+    wrapper: src.wrappers.vad_whisper_small
+    enabled: true
+    
+  ast:
+    wrapper: src.wrappers.vad_ast
+    vad_type: probabilistic
+    enabled: true
+
+  passt:
+    wrapper: src.wrappers.vad_passt
+    vad_type: probabilistic
+    enabled: true
+
+scenarios:
+  chime_cmf:
+    description: "CHiME: c,m,f = speech"
+    chunks_path: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/chime/chunks
+    ground_truth: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/chime/ground_truth/cmf.csv

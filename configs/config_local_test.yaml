@@ -1,0 +1,25 @@
+project:
+  base_path: /mnt/fast/nobackup/users/gb0048/vad_temp_github
+
+# CONFIGURACIÓN GLOBAL (solo 2 archivos para test rápido)
+test_settings:
+  max_files: 2
+  thresholds: [0.3, 0.5, 0.7]
+
+# MODELOS SIMPLES PARA TEST (solo los que no requieren modelos externos)
+models:
+  silero:
+    wrapper: src.wrappers.vad_silero
+    vad_type: probabilistic  
+    enabled: true
+    
+  webrtc:
+    wrapper: src.wrappers.vad_webrtc
+    enabled: true
+
+# DATASETS - enlaces a los originales
+scenarios:
+  chime_cmf:
+    description: "CHiME: c,m,f = speech"
+    chunks_path: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/chime/chunks
+    ground_truth: /mnt/fast/nobackup/users/gb0048/vad_datasets_dcase2025/datasets/chime/ground_truth/cmf.csv
