@@ -23,15 +23,57 @@ python test_installation.py
 python scripts/run_evaluation.py --config configs/config_demo.yaml
 ```
 
+## CHiME-Home Dataset Setup
+
+To reproduce the exact paper results, you need to download and set up the CHiME-Home dataset:
+
+### 1. Download CHiME-Home Dataset
+
+The CHiME-Home dataset is available from the CHiME Challenge website:
+
+```bash
+# Create dataset directory
+mkdir -p datasets/chime/chunks
+
+# Download CHiME-Home dataset
+# Visit: https://www.chimehome.org/ 
+# Or use the direct download link provided by CHiME organizers
+# Extract audio files to: datasets/chime/chunks/
+
+# Expected structure:
+# datasets/chime/chunks/
+# ├── CR_lounge_220110_0731.s0_chunk0.wav
+# ├── CR_lounge_220110_0731.s0_chunk1.wav
+# ├── ...
+# └── [additional 4-second audio chunks at 16kHz]
+```
+
+### 2. Alternative: Use Download Script
+
+If available, you can use the provided download script:
+
+```bash
+# Make download script executable
+chmod +x download_chime.sh
+
+# Download dataset automatically
+./download_chime.sh
+
+# Verify dataset structure
+ls -la datasets/chime/chunks/ | head -10
+```
+
+### 3. Dataset Requirements
+
+- **Format**: WAV files, 16kHz sample rate
+- **Duration**: 4-second chunks
+- **Size**: ~1946 files for full evaluation
+- **Scenarios**: CMF (Children, Mother, Father) and CMFV (+ Visitors)
+- **Ground Truth**: Included in `ground_truth/chime/cmf.csv` and `ground_truth/chime/cmfv.csv`
+
 ## Reproducing Paper Results
 
-To reproduce the exact results from the paper:
-
-### 1. Obtain CHiME-Home Dataset
-- Download the CHiME-Home audio chunks (4-second segments, 16kHz)
-- Place audio files in: `datasets/chime/chunks/`
-
-### 2. Run Paper Evaluations
+### 1. Run Paper Evaluations
 ```bash
 # Human speech detection (CMF scenario) - Table results from paper
 python scripts/run_evaluation.py --config configs/config_chime_cmf.yaml
@@ -43,12 +85,66 @@ python scripts/run_evaluation.py --config configs/config_chime_cmfv.yaml
 python scripts/run_all_scenarios.py --config configs/config_paper_full.yaml
 ```
 
-### 3. Results Location
+### 2. Results Location
 - Individual metrics: `results/metrics_[model].json`
 - Comparison plots: `results/comparison_all_models.png`
 - Performance logs: `results/evaluation_[timestamp].log`
 
 **Ground truth annotations** are included in `ground_truth/chime/`
+
+## Analysis Suite
+
+This repository includes a comprehensive analysis suite for in-depth VAD performance evaluation:
+
+### 1. Run Analysis Scripts
+
+```bash
+# Navigate to analysis directory
+cd analysis/scripts/
+
+# Run complete VAD performance analysis
+python analyze_vad_results.py
+
+# Run parameter count vs performance analysis  
+python analyze_vad_parameters.py
+
+# Compare ground truth versions (if needed)
+python compare_gt_old_new.py
+```
+
+### 2. Generated Analysis Outputs
+
+The analysis scripts generate publication-ready figures and metrics:
+
+```
+analysis/data/Figures/
+├── f1_vs_threshold_comparison.png          # F1 score comparisons
+├── accuracy_vs_threshold_comparison.png    # Accuracy comparisons
+├── roc_curves_comparison.png               # ROC curve analysis
+├── pr_curves_comparison.png                # Precision-Recall curves
+├── performance_vs_speed_comparison.png     # F1 vs RTF scatter plots
+├── parameter_count_vs_performance_*.png    # Model size vs performance
+├── performance_summary_cmf.csv             # CMF scenario metrics
+├── performance_summary_cmfv.csv            # CMFV scenario metrics
+└── parameter_count_analysis.csv            # Efficiency analysis
+```
+
+### 3. Key Analysis Features
+
+- **Comparative Analysis**: CMF vs CMFV scenario performance
+- **Speed Analysis**: Real-Time Factor (RTF) vs F1-score relationships  
+- **Efficiency Analysis**: Parameter count vs performance trade-offs
+- **Threshold Analysis**: Performance across different VAD thresholds
+- **ROC/PR Curves**: Detailed classification performance metrics
+
+### 4. Analysis Results Summary
+
+The analysis reveals key findings:
+
+- **Best Overall Performance**: PaSST (F1=0.861) and AST (F1=0.860) for CMF
+- **Most Efficient**: Silero (0.5M params) and WebRTC (0.01M params)
+- **Speed Leaders**: WebRTC (RTF=0.002) and AST (RTF=0.039)
+- **Scenario Differences**: CMFV generally easier than CMF for all models
 
 ## Supported Models
 
@@ -71,8 +167,14 @@ vad_benchmark/
 │   ├── config_demo.yaml           # Demo with test data
 │   ├── config_chime_cmf.yaml      # Paper: Human speech scenario
 │   └── config_chime_cmfv.yaml     # Paper: Broad vocal content
+├── analysis/                    # Analysis suite
+│   ├── scripts/                   # Analysis scripts
+│   ├── data/                     # Results and ground truth data
+│   └── figures/                  # Generated plots and figures
 ├── ground_truth/               # Paper ground truth annotations  
 │   └── chime/                 # CHiME-Home labels (CMF/CMFV)
+├── datasets/                   # Dataset directory
+│   └── chime/chunks/           # CHiME-Home audio files (download required)
 ├── src/wrappers/              # VAD model implementations
 ├── scripts/                   # Evaluation scripts
 ├── models/                    # Downloaded model weights
@@ -84,9 +186,24 @@ vad_benchmark/
 - **Python**: 3.9+
 - **Storage**: 2GB (models + dependencies)
 - **Memory**: 4GB RAM recommended
-- **OS**: Linux, macOS, Windows
+- **OS**: Linux, macOS, Windows (WSL supported)
 
 The installer automatically handles all dependencies including PyTorch (CPU version for stability).
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Installation fails on Windows/WSL**: The installer has been updated to handle cross-platform compatibility
+2. **PaSST wrapper errors**: Path issues have been resolved in the latest version
+3. **Missing CHiME dataset**: Follow the dataset setup instructions above
+4. **Analysis scripts fail**: Ensure you're in the correct directory and have run evaluations first
+
+### Getting Help
+
+- Check the installation test: `python test_installation.py`
+- Verify dataset structure: `ls datasets/chime/chunks/ | wc -l` (should show ~1946 files)
+- Review evaluation logs in `results/evaluation_*.log`
 
 ## Citation
 
