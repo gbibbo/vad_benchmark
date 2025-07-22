@@ -1,3 +1,5 @@
+from pathlib import Path
+from pathlib import Path
 # src/wrappers/vad_passt.py
 
 """
@@ -36,10 +38,7 @@ class BaseVADWrapper:
 # ---------------------------------------------------------------------
 # CSV de etiquetas
 # ---------------------------------------------------------------------
-LABELS_CSV = Path(
-    "/mnt/fast/nobackup/users/gb0048/vad_chime_gpu_20250703_181054/"
-    "models/panns/class_labels_indices.csv"
-)
+LABELS_CSV = Path(__file__).resolve().parent.parent.parent / 'models' / 'metadata' / 'class_labels_indices.csv'
 
 with open(LABELS_CSV) as f:
     reader = csv.DictReader(f)
