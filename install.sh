@@ -55,12 +55,13 @@ pip install torch torchaudio torchvision --index-url https://download.pytorch.or
 
 print_step "Installing core dependencies..."
 pip install numpy pandas scipy matplotlib seaborn scikit-learn librosa soundfile PyYAML tqdm faster-whisper transformers huggingface-hub datasets accelerate hear21passt torchlibrosa torchsummary einops
+pip install pytest
 
 print_step "Installing webrtcvad..."
 if command -v conda &> /dev/null; then
-    conda install -c conda-forge webrtcvad -y || pip install webrtcvad
+    conda install -c conda-forge webrtcvad -y || pip install webrtcvad-wheels || pip install webrtcvad
 else
-    pip install webrtcvad
+    pip install webrtcvad-wheels || pip install webrtcvad
 fi
 
 print_step "Creating directory structure..."
@@ -80,8 +81,32 @@ if [[ ! -f "models/panns/Cnn14_DecisionLevelAtt" ]]; then
 fi
 
 if [[ ! -f "models/metadata/class_labels_indices.csv" ]]; then
+# --- Fix PaSST wrapper to use relative CSV path --- 
+
+sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
+# Fix PaSST label path
+CSV_PATH="$(pwd)/models/metadata/class_labels_indices.csv"
+# --- Fix PaSST wrapper to use relative CSV path --- 
+
+sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
+sed -i "s|/mnt/fast/nobackup.*class_labels_indices.csv|${CSV_PATH}|" src/wrappers/vad_passt.py
+# --- Fix PaSST wrapper to use relative CSV path --- 
+
+sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
     print_step "Downloading AudioSet labels..."
     wget -O models/metadata/class_labels_indices.csv "https://raw.githubusercontent.com/qiuqiangkong/audioset_tagging_cnn/master/metadata/class_labels_indices.csv"
+# --- Fix PaSST wrapper to use relative CSV path --- 
+
+sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
+# Fix PaSST label path
+CSV_PATH="$(pwd)/models/metadata/class_labels_indices.csv"
+# --- Fix PaSST wrapper to use relative CSV path --- 
+
+sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
+sed -i "s|/mnt/fast/nobackup.*class_labels_indices.csv|${CSV_PATH}|" src/wrappers/vad_passt.py
+# --- Fix PaSST wrapper to use relative CSV path --- 
+
+sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
 fi
 
 print_step "Creating EPANNs support files..."

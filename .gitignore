@@ -38,3 +38,15 @@ Thumbs.db
 
 # Jupyter
 .ipynb_checkpoints/
+# Virtual environments
+.venv/
+venv/
+__pycache__/
+
+# Large log files (>50MB)
+analysis/data/results_MUSAN/evaluation_20250708_170811.log
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
