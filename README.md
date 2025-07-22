@@ -1,6 +1,6 @@
 # VAD-Benchmark: Voice Activity Detection Evaluation Framework
 
-This repository contains the code and evaluation framework supporting the paper:
+This repository contains code and evaluation tools for the paper:
 
 **"Privacy-Preserving Voice Activity Detection: Evaluating AI Model Performance on Domestic Audio"**  
 *Gabriel Bibbo, Arshdeep Singh, Mark D. Plumbley*  
@@ -25,11 +25,11 @@ python scripts/run_evaluation.py --config configs/config_demo.yaml
 
 ## CHiME-Home Dataset Setup
 
-To reproduce the exact paper results, you need to download and set up the CHiME-Home dataset:
+To reproduce the exact paper results, you need the CHiME-Home dataset:
 
 ### 1. Download CHiME-Home Dataset
 
-The CHiME-Home dataset is available from the CHiME Challenge website:
+Get the CHiME-Home dataset from the CHiME Challenge website:
 
 ```bash
 # Create dataset directory
@@ -37,7 +37,7 @@ mkdir -p datasets/chime/chunks
 
 # Download CHiME-Home dataset
 # Visit: https://www.chimehome.org/ 
-# Or use the direct download link provided by CHiME organizers
+# Or use the direct download link from CHiME organizers
 # Extract audio files to: datasets/chime/chunks/
 
 # Expected structure:
@@ -69,9 +69,9 @@ ls -la datasets/chime/chunks/ | head -10
 - **Duration**: 4-second chunks
 - **Size**: ~1946 files for full evaluation
 - **Scenarios**: CMF (Children, Mother, Father) and CMFV (+ Visitors)
-- **Ground Truth**: Included in `ground_truth/chime/cmf.csv` and `ground_truth/chime/cmfv.csv`
+- **Ground Truth**: Files in `ground_truth/chime/cmf.csv` and `ground_truth/chime/cmfv.csv`
 
-## Reproducing Paper Results
+## Paper Results
 
 ### 1. Run Paper Evaluations
 ```bash
@@ -88,94 +88,113 @@ python scripts/run_all_scenarios.py --config configs/config_paper_full.yaml
 ### 2. Results Location
 - Individual metrics: `results/metrics_[model].json`
 - Comparison plots: `results/comparison_all_models.png`
-- Performance logs: `results/evaluation_[timestamp].log`
+- Logs: `results/evaluation_[timestamp].log`
 
-**Ground truth annotations** are included in `ground_truth/chime/`
+**Ground truth annotations** are in `ground_truth/chime/`
 
-## Analysis Suite
+## Key Findings
 
-This repository includes a comprehensive analysis suite for in-depth VAD performance evaluation:
+The evaluation results show clear patterns in VAD model behavior:
 
-### 1. Run Analysis Scripts
+![F1 Score and ROC Curves](F1_ROC_combined.png)
+
+**What the results tell us:**
+- **CMF Scenario** (detecting human speech): PaSST and AST models work best (F1 = 0.86)
+- **CMFV Scenario** (detecting any vocal content): Most models reach F1 = 0.97, making this task easier
+- **ROC Curves** show model trade-offs between catching true speech vs avoiding false alarms
+- **Threshold sensitivity** varies greatly between models
+
+![Parameter Count vs F1 Score](parameter_count_performance.png)
+
+**Model efficiency patterns:**
+- **Small models** (Silero, WebRTC) offer good value: decent F1 scores with tiny memory footprint
+- **Large models** (80M+ parameters) give the best F1 scores but cost much more memory
+- **Sweet spot** appears around 24M parameters (EPANNs) for balanced efficiency
+
+## VAD Models Tested
+
+The framework tests 8 VAD models across 4 families:
+
+| Family | Models | CMF F1-Score |
+|--------|--------|--------------|
+| **Lightweight VAD** | Silero, WebRTC | 0.806, 0.708 |
+| **AudioSet Pre-trained** | PANNs, EPANNs, AST, PaSST | 0.848, 0.847, 0.860, 0.861 |
+| **Speech Recognition** | Whisper-Tiny, Whisper-Small | 0.668, 0.654 |
+
+*Results for CMF scenario (human speech detection)*
+
+## Run Your Own Tests
+
+This repository includes scripts for deep dive evaluation:
+
+### 1. Run Tests
 
 ```bash
-# Navigate to analysis directory
+# Go to test scripts
 cd analysis/scripts/
 
-# Run complete VAD performance analysis
+# Run complete VAD tests  
 python analyze_vad_results.py
 
-# Run parameter count vs performance analysis  
+# Run parameter count vs F1 tests
 python analyze_vad_parameters.py
 
 # Compare ground truth versions (if needed)
 python compare_gt_old_new.py
 ```
 
-### 2. Generated Analysis Outputs
+### 2. Generated Outputs
 
-The analysis scripts generate publication-ready figures and metrics:
+The test scripts create publication-ready figures and metrics:
 
 ```
 analysis/data/Figures/
 ├── f1_vs_threshold_comparison.png          # F1 score comparisons
 ├── accuracy_vs_threshold_comparison.png    # Accuracy comparisons
-├── roc_curves_comparison.png               # ROC curve analysis
+├── roc_curves_comparison.png               # ROC curve tests
 ├── pr_curves_comparison.png                # Precision-Recall curves
 ├── performance_vs_speed_comparison.png     # F1 vs RTF scatter plots
-├── parameter_count_vs_performance_*.png    # Model size vs performance
+├── parameter_count_vs_performance_*.png    # Model size vs F1 score
 ├── performance_summary_cmf.csv             # CMF scenario metrics
 ├── performance_summary_cmfv.csv            # CMFV scenario metrics
-└── parameter_count_analysis.csv            # Efficiency analysis
+└── parameter_count_analysis.csv            # Efficiency tests
 ```
 
-### 3. Key Analysis Features
+### 3. What You Get
 
-- **Comparative Analysis**: CMF vs CMFV scenario performance
-- **Speed Analysis**: Real-Time Factor (RTF) vs F1-score relationships  
-- **Efficiency Analysis**: Parameter count vs performance trade-offs
-- **Threshold Analysis**: Performance across different VAD thresholds
-- **ROC/PR Curves**: Detailed classification performance metrics
+- **Side-by-side comparisons**: CMF vs CMFV scenario results
+- **Speed tests**: Real-Time Factor (RTF) vs F1-score relationships  
+- **Efficiency tests**: Parameter count vs F1 score trade-offs
+- **Threshold tests**: How models behave across different VAD thresholds
+- **ROC/PR Curves**: Detailed classification metrics
 
-### 4. Analysis Results Summary
+### 4. Key Results Summary
 
-The analysis reveals key findings:
+The tests reveal important patterns:
 
-- **Best Overall Performance**: PaSST (F1=0.861) and AST (F1=0.860) for CMF
+- **Best Overall**: PaSST (F1=0.861) and AST (F1=0.860) for CMF
 - **Most Efficient**: Silero (0.5M params) and WebRTC (0.01M params)
-- **Speed Leaders**: WebRTC (RTF=0.002) and AST (RTF=0.039)
-- **Scenario Differences**: CMFV generally easier than CMF for all models
-
-## Supported Models
-
-The framework evaluates 8 VAD models from the paper across 4 architectural families:
-
-| Family | Models | Paper Results (F1-Score) |
-|--------|--------|-------------------------|
-| **Lightweight VAD** | Silero, WebRTC | 0.806, 0.708 |
-| **AudioSet Pre-trained** | PANNs, EPANNs, AST, PaSST | 0.848, 0.847, 0.860, 0.861 |
-| **Speech Recognition** | Whisper-Tiny, Whisper-Small | 0.668, 0.654 |
-
-*Results shown for CMF scenario (human speech detection)*
+- **Fastest**: WebRTC (RTF=0.002) and AST (RTF=0.039)
+- **Scenario Differences**: CMFV is much easier than CMF for all models
 
 ## Project Structure
 
 ```
 vad_benchmark/
 ├── install.sh                    # Automatic installer
-├── configs/                     # Evaluation configurations
+├── configs/                     # Evaluation setups
 │   ├── config_demo.yaml           # Demo with test data
 │   ├── config_chime_cmf.yaml      # Paper: Human speech scenario
 │   └── config_chime_cmfv.yaml     # Paper: Broad vocal content
-├── analysis/                    # Analysis suite
-│   ├── scripts/                   # Analysis scripts
+├── analysis/                    # Test suite
+│   ├── scripts/                   # Test scripts
 │   ├── data/                     # Results and ground truth data
 │   └── figures/                  # Generated plots and figures
 ├── ground_truth/               # Paper ground truth annotations  
 │   └── chime/                 # CHiME-Home labels (CMF/CMFV)
 ├── datasets/                   # Dataset directory
 │   └── chime/chunks/           # CHiME-Home audio files (download required)
-├── src/wrappers/              # VAD model implementations
+├── src/wrappers/              # VAD model code
 ├── scripts/                   # Evaluation scripts
 ├── models/                    # Downloaded model weights
 └── results/                   # Output metrics and plots
@@ -188,16 +207,16 @@ vad_benchmark/
 - **Memory**: 4GB RAM recommended
 - **OS**: Linux, macOS, Windows (WSL supported)
 
-The installer automatically handles all dependencies including PyTorch (CPU version for stability).
+The installer handles all dependencies including PyTorch (CPU version for stability).
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Installation fails on Windows/WSL**: The installer has been updated to handle cross-platform compatibility
-2. **PaSST wrapper errors**: Path issues have been resolved in the latest version
+1. **Installation fails on Windows/WSL**: The installer now handles cross-platform compatibility
+2. **PaSST wrapper errors**: Path issues have been fixed in the latest version
 3. **Missing CHiME dataset**: Follow the dataset setup instructions above
-4. **Analysis scripts fail**: Ensure you're in the correct directory and have run evaluations first
+4. **Test scripts fail**: Make sure you're in the correct directory and have run evaluations first
 
 ### Getting Help
 
