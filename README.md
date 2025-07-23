@@ -68,7 +68,7 @@ ls -la datasets/chime/chunks/ | head -10
 - **Format**: WAV files, 16kHz sample rate
 - **Duration**: 4-second chunks
 - **Size**: ~1946 files for full evaluation
-- **Scenarios**: CMF (Children, Mother, Father) and CMFV (+ Visitors)
+- **Scenarios**: CMF (Child, Male, Female) and CMFV (+ Television)
 - **Ground Truth**: Files in `ground_truth/chime/cmf.csv` and `ground_truth/chime/cmfv.csv`
 
 ## Paper Results
