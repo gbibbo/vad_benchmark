@@ -168,14 +168,6 @@ analysis/data/Figures/
 - **Threshold tests**: How models behave across different VAD thresholds
 - **ROC/PR Curves**: Detailed classification metrics
 
-### 4. Key Results Summary
-
-The tests reveal important patterns:
-
-- **Best Overall**: PaSST (F1=0.861) and AST (F1=0.860) for CMF
-- **Most Efficient**: Silero (0.5M params) and WebRTC (0.01M params)
-- **Fastest**: WebRTC (RTF=0.002) and AST (RTF=0.039)
-- **Scenario Differences**: CMFV is much easier than CMF for all models
 
 ## Project Structure
 
@@ -209,16 +201,7 @@ vad_benchmark/
 
 The installer handles all dependencies including PyTorch (CPU version for stability).
 
-## Troubleshooting
-
-### Common Issues
-
-1. **Installation fails on Windows/WSL**: The installer now handles cross-platform compatibility
-2. **PaSST wrapper errors**: Path issues have been fixed in the latest version
-3. **Missing CHiME dataset**: Follow the dataset setup instructions above
-4. **Test scripts fail**: Make sure you're in the correct directory and have run evaluations first
-
-### Getting Help
+## Getting Help
 
 - Check the installation test: `python test_installation.py`
 - Verify dataset structure: `ls datasets/chime/chunks/ | wc -l` (should show ~1946 files)
