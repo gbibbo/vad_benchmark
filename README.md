@@ -201,7 +201,7 @@ vad_benchmark/
 
 The installer handles all dependencies including PyTorch (CPU version for stability).
 
-## Getting Help
+## Troubleshooting
 
 - Check the installation test: `python test_installation.py`
 - Verify dataset structure: `ls datasets/chime/chunks/ | wc -l` (should show ~1946 files)
