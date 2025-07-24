@@ -1,6 +1,6 @@
-# src/wrappers/vad_epanns.py
-"""
-E-PANNs VAD wrapper - Usa archivos existentes de E-PANNs
+"""!
+@file vad_epanns.py
+@brief A VAD wrapper for the E-PANNs model, adapted from its original source code.
 """
 
 from pathlib import Path
@@ -11,23 +11,23 @@ import csv
 import torch
 import librosa
 
-# Agregar path de epanns
+# Add the E-PANNs project path to sys.path
 project_root = str(Path(__file__).parent.parent.parent)
 epanns_path = os.path.join(project_root, 'models', 'epanns')
 if epanns_path not in sys.path:
     sys.path.insert(0, epanns_path)
 
-# Importar de los archivos existentes
+# Import from the existing E-PANNs files
 from models.epanns import Cnn14_pruned
 from models.epanns import move_data_to_device
 
-# Importar AudioModelInference manualmente para evitar imports relativos
+# Manually import AudioModelInference components to avoid relative import issues
 import torch
 import numpy as np
 import librosa
 
 class AudioModelInference:
-    """Copia simplificada de AudioModelInference de E-PANNs"""
+    """! @brief A simplified copy of the AudioModelInference class from the E-PANNs project. """
     LOGMEL_MEANS = np.float32([
         -14.050895, -13.107869, -13.1390915, -13.255364, -13.917199,
         -14.087848, -14.855916, -15.266642, -15.884036, -16.491768,
@@ -82,7 +82,7 @@ class AudioModelInference:
             preds = self.model(audio, None).to("cpu").numpy().squeeze(axis=0)
         return preds
 
-# Reutilizar etiquetas de PANNs
+# Reuse labels from PANNs
 LABELS_CSV = Path(project_root) / "models" / "panns" / "class_labels_indices.csv"
 
 with open(LABELS_CSV) as f:
@@ -98,18 +98,23 @@ SPEECH_TAGS = {
 SPEECH_INDICES = [i for i, label in enumerate(AUDIOSET_LABELS) if label in SPEECH_TAGS]
 
 class EPANNsVADWrapper:
-    """VAD usando E-PANNs existente."""
+    """! @brief A VAD wrapper using an existing E-PANNs model. """
     
     def __init__(self, checkpoint="models/epanns/E-PANNs/models/checkpoint_closeto_.44.pt"):
+        """!
+        @brief Initializes the E-PANNs VAD wrapper.
+        @param checkpoint Path to the E-PANNs model checkpoint file.
+        """
         self.checkpoint = Path(checkpoint)
         
         if not self.checkpoint.exists():
-            raise FileNotFoundError(f"Checkpoint no encontrado: {self.checkpoint}")
+            raise FileNotFoundError(f"Checkpoint not found: {self.checkpoint}")
             
-        print(f"[E-PANNs] Cargando: {self.checkpoint}")
+        print(f"[E-PANNs] Loading: {self.checkpoint}")
         self._load_model()
 
     def _load_model(self):
+        """! @brief Loads the E-PANNs model from the specified checkpoint. """
         model = Cnn14_pruned(
             sample_rate=32000, window_size=1024, hop_size=320, mel_bins=64,
             fmin=50, fmax=14000, classes_num=527,
@@ -122,9 +127,14 @@ class EPANNsVADWrapper:
         model.eval()
         
         self.audio_inference = AudioModelInference(model)
-        print("[E-PANNs] Modelo cargado")
+        print("[E-PANNs] Model loaded")
 
     def infer(self, wav_path: str) -> np.ndarray:
+        """!
+        @brief Performs VAD inference on an audio file.
+        @param wav_path Path to the input audio file.
+        @return np.ndarray An array of probabilities representing speech presence.
+        """
         try:
             wav, sr = librosa.load(wav_path, sr=32000, mono=True)
             predictions = self.audio_inference(wav)
@@ -132,7 +142,7 @@ class EPANNsVADWrapper:
             speech_probs = predictions[SPEECH_INDICES]
             max_speech_prob = np.max(speech_probs)
             
-            # Estimar frames (E-PANNs solo da clipwise)
+            # Estimate frames (E-PANNs only provides a clip-wise prediction)
             num_frames = max(1, int(len(wav) / 320))
             frame_probs = np.full(num_frames, max_speech_prob, dtype=np.float32)
             
@@ -143,5 +153,5 @@ class EPANNsVADWrapper:
             print(f"[E-PANNs] Error: {e}")
             return np.array([0.5], dtype=np.float32)
 
-# Alias para compatibilidad
+# Alias for compatibility
 EPANNsVADProb = EPANNsVADWrapper

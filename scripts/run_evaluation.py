@@ -1,17 +1,20 @@
-#!/usr/bin/env python3
-"""
-scripts/run_evaluation.py - Script maestro para evaluación completa de modelos VAD
+#!/usr/-bin/env python3
+"""!
+@file run_evaluation.py
+@brief Master script for the complete evaluation of VAD models.
 
-Flujo:
-1. Verificar si existe inferencia previa
-2. Si no existe → Inferencia en N ejemplos (prototipo)
-3. Evaluación contra ground truth con prints detallados
-4. Guardar métricas y generar gráficos
-5. Resumen final comparativo
+@section workflow Workflow
+1.  Check if previous inference results exist.
+2.  If not, run inference on N examples (prototype).
+3.  Evaluate against ground truth with detailed printouts.
+4.  Save metrics and generate plots.
+5.  Provide a final comparative summary.
 
-Uso:
-    python scripts/run_evaluation.py --config config_test.yaml --mode prototype
-    python scripts/run_evaluation.py --config config_full.yaml --mode full
+@section usage Usage
+@code
+python scripts/run_evaluation.py --config config_test.yaml --mode prototype
+python scripts/run_evaluation.py --config config_full.yaml --mode full
+@endcode
 """
 
 import sys
@@ -32,34 +35,43 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 
-# Agregar proyecto al path
+# Add project to the Python path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 class VADEvaluator:
-    """Evaluador maestro para modelos VAD."""
+    """! @brief Master evaluator for VAD models. """
     
     def __init__(self, config_path: str, verbose: bool = True):
+        """!
+        @brief Initializes the VADEvaluator.
+        @param config_path Path to the YAML configuration file.
+        @param verbose If True, enables detailed logging to the console.
+        """
         self.config = self._load_config(config_path)
         self.verbose = verbose
         self.base_path = Path(self.config['project']['base_path'])
         self.results_dir = self.base_path / 'results'
-        #self.results_dir = self.base_path / 'results'
         self.results_dir.mkdir(exist_ok=True)
         
-        # Setup logging
         self._setup_logging()
         
-        # Diccionario de resultados
+        # Results dictionary
         self.all_results = {}
         
     def _load_config(self, config_path: str) -> dict:
-        """Cargar configuración YAML."""
+        """!
+        @brief Loads the YAML configuration file.
+        @param config_path Path to the YAML configuration file.
+        @return A dictionary with the loaded configuration.
+        """
         with open(config_path, 'r') as f:
             return yaml.safe_load(f)
     
     def _setup_logging(self):
-        """Configurar logging con archivo y consola."""
+        """!
+        @brief Sets up logging to both a file and the console.
+        """
         log_file = self.results_dir / f"evaluation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
         
         logging.basicConfig(
@@ -72,57 +84,61 @@ class VADEvaluator:
         )
         
         self.logger = logging.getLogger(__name__)
-        self.logger.info(f"🚀 Iniciando evaluación VAD - Log: {log_file}")
+        self.logger.info(f"🚀 Starting VAD evaluation - Log: {log_file}")
     
     def _get_audio_files_limited(self, dataset_config: dict, max_files: int) -> List[str]:
-        """
-        🔧 ARREGLADO: Obtener archivos que SÍ estén en el ground truth.
+        """!
+        @brief Gets a limited list of audio files that are present in the ground truth.
         
-        En lugar de seleccionar archivos aleatorios del dataset,
-        lee el ground truth y busca esos archivos específicos.
+        @note [FIXED] Instead of selecting random files from the dataset, this method
+              reads the ground truth and searches for those specific files.
+              
+        @param dataset_config The configuration dictionary for the dataset.
+        @param max_files The maximum number of files to return.
+        @return A list of paths to the audio files.
         """
-        # Cargar ground truth para saber qué archivos buscar
+        # Load ground truth to know which files to look for
         gt_path = dataset_config['ground_truth']
         chunks_path = self.base_path / dataset_config['chunks_path']
         
         if not chunks_path.exists():
-            self.logger.warning(f"📁 Dataset no encontrado: {chunks_path}")
+            self.logger.warning(f"📁 Dataset not found: {chunks_path}")
             return []
         
         if not os.path.exists(gt_path):
-            self.logger.warning(f"📁 Ground truth no encontrado: {gt_path}")
+            self.logger.warning(f"📁 Ground truth not found: {gt_path}")
             return []
         
-        # Leer ground truth
+        # Read ground truth
         try:
             gt_df = pd.read_csv(gt_path)
             
-            # Detectar formato de columnas
+            # Detect column format
             if 'Chunk' in gt_df.columns:
                 chunk_col = 'Chunk'
             elif 'Filename' in gt_df.columns:
                 chunk_col = 'Filename'
             else:
-                chunk_col = gt_df.columns[0]  # Primera columna
+                chunk_col = gt_df.columns[0]  # First column
             
-            # Obtener lista de archivos del GT
+            # Get list of files from the GT
             gt_files = gt_df[chunk_col].tolist()
             
-            self.logger.info(f"📋 Ground truth: {len(gt_files)} archivos disponibles")
+            self.logger.info(f"📋 Ground truth: {len(gt_files)} files available")
             
-            # Buscar los archivos correspondientes en chunks
+            # Search for the corresponding files in chunks
             found_files = []
             searched_count = 0
             
             for gt_file in gt_files:
                 searched_count += 1
                 
-                # Buscar archivo .wav correspondiente
-                # Probar diferentes patrones
+                # Search for the corresponding .wav file
+                # Try different patterns
                 patterns = [
-                    gt_file,                    # NUEVO: Para MUSAN (path completo)
-                    f"**/{gt_file}",           # NUEVO: MUSAN en subdirectorios
-                    f"{gt_file}.16kHz.wav",    # ORIGINAL: Para CHiME  
+                    gt_file,                    # NEW: For MUSAN (full path)
+                    f"**/{gt_file}",           # NEW: MUSAN in subdirectories
+                    f"{gt_file}.16kHz.wav",    # ORIGINAL: For CHiME  
                     f"{gt_file}.wav",          # ORIGINAL: Fallback
                     f"*{gt_file}*.wav",        # ORIGINAL: Wildcard
                     f"{gt_file}*.wav"          # ORIGINAL: Suffix wildcard
@@ -133,35 +149,40 @@ class VADEvaluator:
                     matches = list(chunks_path.glob(pattern))
                     if matches:
                         found_files.append(str(matches[0]))
-                        if self.verbose and len(found_files) <= 5:  # Solo log primeros 5
+                        if self.verbose and len(found_files) <= 5:  # Only log the first 5
                             self.logger.info(f"✅ {gt_file} → {matches[0].name}")
                         file_found = True
                         break
                 
                 if not file_found and self.verbose and searched_count <= 5:
-                    self.logger.info(f"❌ {gt_file} → No encontrado")
+                    self.logger.info(f"❌ {gt_file} → Not found")
                 
-                # Parar cuando tengamos suficientes archivos
+                # Stop when we have enough files
                 if len(found_files) >= max_files:
                     break
             
             if found_files:
-                self.logger.info(f"📊 Dataset {chunks_path.name}: {len(found_files)}/{searched_count} archivos encontrados del GT")
+                self.logger.info(f"📊 Dataset {chunks_path.name}: {len(found_files)}/{searched_count} files from GT found")
             else:
-                self.logger.warning(f"⚠️ No se encontraron archivos del GT en {chunks_path}")
+                self.logger.warning(f"⚠️ No files from GT were found in {chunks_path}")
                 
-                # Fallback: usar método anterior si no se encuentran archivos del GT
-                self.logger.info("🔄 Usando selección aleatoria como fallback...")
+                # Fallback: use the previous method if GT files are not found
+                self.logger.info("🔄 Using random selection as fallback...")
                 return self._get_audio_files_fallback(chunks_path, max_files)
             
             return found_files
             
         except Exception as e:
-            self.logger.warning(f"⚠️ Error leyendo GT {gt_path}: {e}")
+            self.logger.warning(f"⚠️ Error reading GT {gt_path}: {e}")
             return self._get_audio_files_fallback(chunks_path, max_files)
     
     def _get_audio_files_fallback(self, dataset_path: Path, max_files: int) -> List[str]:
-        """Método fallback de selección aleatoria (método original)."""
+        """!
+        @brief Fallback method for random file selection (original method).
+        @param dataset_path The path to the dataset directory.
+        @param max_files The maximum number of files to select.
+        @return A list of paths to the audio files.
+        """
         patterns = ["**/*.wav", "**/*16kHz*.wav", "*/*.wav"]
         audio_files = []
         
@@ -172,21 +193,25 @@ class VADEvaluator:
                 break
         
         limited_files = sorted(audio_files)[:max_files]
-        self.logger.info(f"📊 Fallback: {len(audio_files)} archivos, usando {len(limited_files)}")
+        self.logger.info(f"📊 Fallback: {len(audio_files)} files found, using {len(limited_files)}")
         
         return limited_files
     
     def _load_wrapper(self, wrapper_path: str):
-        """Cargar wrapper dinámicamente con debug mejorado."""
+        """!
+        @brief Dynamically loads a VAD wrapper with enhanced debugging.
+        @param wrapper_path The module path to the wrapper class.
+        @return An instance of the wrapper class, or None on error.
+        """
         try:
-            # Fix: No hacer rsplit, importar el path completo
+            # Fix: Do not rsplit, import the full path
             module_path = wrapper_path
-            self.logger.info(f"🔍 Intentando importar módulo: {module_path}")
+            self.logger.info(f"🔍 Attempting to import module: {module_path}")
             
             module = importlib.import_module(module_path)
-            self.logger.info(f"✅ Módulo importado correctamente")
+            self.logger.info(f"✅ Module imported successfully")
             
-            # Debug: mostrar todas las clases del módulo
+            # Debug: show all classes in the module
             all_classes = []
             wrapper_classes = []
             
@@ -198,39 +223,43 @@ class VADEvaluator:
                         has_infer = hasattr(attr, 'infer')
                         if has_infer and attr_name != 'BaseVADWrapper':
                             wrapper_classes.append((attr_name, attr))
-                            self.logger.info(f"  🎯 Clase wrapper encontrada: {attr_name}")
+                            self.logger.info(f"  🎯 Wrapper class found: {attr_name}")
             
-            self.logger.info(f"📋 Todas las clases en módulo: {all_classes}")
+            self.logger.info(f"📋 All classes in module: {all_classes}")
             
             if not wrapper_classes:
-                self.logger.error(f"❌ No se encontraron clases con método 'infer' en {wrapper_path}")
+                self.logger.error(f"❌ No classes with an 'infer' method found in {wrapper_path}")
                 return None
             
-            # Preferir clase que termine en 'Wrapper' o contenga 'VAD'
+            # Prefer a class ending in 'Wrapper' or containing 'VAD'
             for name, cls in wrapper_classes:
                 if 'wrapper' in name.lower() or 'vad' in name.lower():
-                    self.logger.info(f"🔧 Cargando wrapper preferido: {name}")
+                    self.logger.info(f"🔧 Loading preferred wrapper: {name}")
                     return cls()
             
-            # Si no hay preferencia, usar la primera
+            # If no preference, use the first one found
             name, cls = wrapper_classes[0]
-            self.logger.info(f"🔧 Cargando primer wrapper disponible: {name}")
+            self.logger.info(f"🔧 Loading first available wrapper: {name}")
             return cls()
             
         except Exception as e:
             import traceback
-            self.logger.error(f"❌ Error cargando wrapper {wrapper_path}: {e}")
+            self.logger.error(f"❌ Error loading wrapper {wrapper_path}: {e}")
             self.logger.error(f"🔍 Traceback: {traceback.format_exc()}")
             return None
     
     def _is_binary_model(self, model_name: str) -> bool:
-        """Detectar si un modelo es binario (devuelve solo 0/1) o probabilístico."""
-        # Lista de modelos conocidos como binarios
+        """!
+        @brief Detects if a model is binary (returns only 0/1) or probabilistic.
+        @param model_name The name of the model.
+        @return True if the model is considered binary, False otherwise.
+        """
+        # List of models known to be binary
         binary_models = [
             'webrtc', 'whisper', 'whisper_tiny', 'whisper_small'
         ]
         
-        # Verificar si el nombre del modelo indica que es binario
+        # Check if the model name indicates it is binary
         model_lower = model_name.lower()
         for binary_name in binary_models:
             if binary_name in model_lower:
@@ -239,7 +268,11 @@ class VADEvaluator:
         return False
 
     def _masks_exist(self, model_name: str) -> bool:
-        """Verificar si existen máscaras para un modelo."""
+        """!
+        @brief Checks if inference masks already exist for a given model.
+        @param model_name The name of the model.
+        @return True if mask files are found, False otherwise.
+        """
         masks_dir = self.results_dir / f"masks_{model_name}"
         if not masks_dir.exists():
             return False
@@ -249,22 +282,29 @@ class VADEvaluator:
     
     def _run_inference(self, model_name: str, wrapper, audio_files: List[str], 
                     thresholds: List[float]) -> bool:
-        """Ejecutar inferencia para un modelo en archivos limitados."""
-        self.logger.info(f"🔬 Ejecutando inferencia {model_name.upper()} en {len(audio_files)} archivos...")
+        """!
+        @brief Runs inference for a given model on a limited set of audio files.
+        @param model_name The name of the model being evaluated.
+        @param wrapper The loaded VAD model wrapper instance.
+        @param audio_files A list of paths to the audio files for inference.
+        @param thresholds A list of thresholds to apply to the model's output probabilities.
+        @return True if the inference process was successful for at least one file, False otherwise.
+        """
+        self.logger.info(f"🔬 Running inference for {model_name.upper()} on {len(audio_files)} files...")
         
         masks_dir = self.results_dir / f"masks_{model_name}"
         masks_dir.mkdir(exist_ok=True)
         
-        # Verificar si es modelo binario
+        # Check if it's a binary model
         is_binary = self._is_binary_model(model_name)
         if is_binary:
-            self.logger.info(f"   🎯 Modelo binario detectado: {model_name}")
+            self.logger.info(f"   🎯 Binary model detected: {model_name}")
         
-        # Inicializar máscaras para cada threshold
+        # Initialize masks for each threshold
         masks = {thresh: [] for thresh in thresholds}
         
         success_count = 0
-        all_probs = []  # Para análisis de distribución
+        all_probs = []  # For distribution analysis
         
         for i, audio_path in enumerate(audio_files):
             filename = os.path.basename(audio_path)
@@ -272,25 +312,25 @@ class VADEvaluator:
             try:
                 self.logger.info(f"  📄 {i+1}/{len(audio_files)}: {filename}")
                 
-                # Inferencia
+                # Inference
                 probs = wrapper.infer(audio_path)
-                # Soportar tensores PyTorch, ndarrays o listas
+                # Support PyTorch tensors, ndarrays, or lists
                 if isinstance(probs, torch.Tensor):
                     max_prob = probs.max().item()
                 else:
                     max_prob = float(np.max(probs)) if len(probs) > 0 else 0.0
                 all_probs.append(max_prob)
                 
-                # Aplicar thresholds
+                # Apply thresholds
                 if is_binary:
-                    # Para modelos binarios: usar decisión directa, ignorar thresholds
+                    # For binary models: use the direct decision, ignore thresholds
                     has_speech_binary = int(max_prob > 0)
                     for threshold in thresholds:
                         masks[threshold].append([filename, has_speech_binary])
                         
-                    self.logger.info(f"    ✅ {len(probs)} frames, binario={has_speech_binary}")
+                    self.logger.info(f"    ✅ {len(probs)} frames, binary={has_speech_binary}")
                 else:
-                    # Para modelos probabilísticos: aplicar thresholds normalmente
+                    # For probabilistic models: apply thresholds normally
                     for threshold in thresholds:
                         has_speech = int(max_prob >= threshold)
                         masks[threshold].append([filename, has_speech])
@@ -301,36 +341,40 @@ class VADEvaluator:
                 
             except Exception as e:
                 self.logger.error(f"    ❌ Error: {e}")
-                # Agregar como no-speech en caso de error
+                # Add as non-speech in case of error
                 for threshold in thresholds:
                     masks[threshold].append([filename, 0])
         
-        # Análisis de distribución para debug
+        # Distribution analysis for debugging
         if all_probs:
             unique_probs = np.unique(all_probs)
-            self.logger.info(f"   📊 Distribución de probabilidades: {unique_probs}")
+            self.logger.info(f"   📊 Probability distribution: {unique_probs}")
             
             if is_binary and len(unique_probs) > 2:
-                self.logger.warning(f"   ⚠️  Modelo marcado como binario pero tiene {len(unique_probs)} valores únicos")
+                self.logger.warning(f"   ⚠️  Model marked as binary but has {len(unique_probs)} unique values")
         
-        # Guardar máscaras
+        # Save masks
         for threshold, rows in masks.items():
             mask_file = masks_dir / f"mask_{threshold:.2f}.csv"
             df = pd.DataFrame(rows, columns=['Filename', 'Speech'])
             df.to_csv(mask_file, index=False)
         
-        self.logger.info(f"✅ Inferencia completada: {success_count}/{len(audio_files)} exitosos")
+        self.logger.info(f"✅ Inference completed: {success_count}/{len(audio_files)} successful")
         return success_count > 0   
     
     def _load_ground_truth(self, gt_path: str) -> pd.DataFrame:
-        """Cargar ground truth CSV - flexible para diferentes formatos."""
+        """!
+        @brief Loads the ground truth CSV file, handling different formats flexibly.
+        @param gt_path Path to the ground truth CSV file.
+        @return A pandas DataFrame with normalized filenames and labels.
+        """
         df = pd.read_csv(gt_path)
 
         # ------------------------------------------------------------------
-        # 1. Detectar formato de columnas  ─────────────
-        #    · CHiME      → (Chunk, Condition)           normal
-        #    · CHiME 2    → (Filename, Speech)           normal
-        #    · MUSAN puro → 1 sola columna con la ruta   deducir Speech
+        # 1. Detect column format
+        #    · CHiME      → (Chunk, Condition)           (normal)
+        #    · CHiME 2    → (Filename, Speech)           (normal)
+        #    · Pure MUSAN → 1 single column with the path   (deduce Speech)
         # ------------------------------------------------------------------
         filename_col = label_col = None
 
@@ -341,31 +385,31 @@ class VADEvaluator:
             filename_col, label_col = 'Filename', 'Speech'
 
         else:
-            # ---- Caso MUSAN: sin etiqueta explícita ----------------------
-            # Esperamos una única columna con la ruta relativa al corpus.
+            # ---- MUSAN case: no explicit label ---------------------------
+            # Expect a single column with the relative path to the corpus.
             if df.shape[1] == 1:
                 filename_col = df.columns[0]
 
-                # Deducir Speech (=1) ó no-speech (=0) según la carpeta
+                # Deduce Speech (=1) or non-speech (=0) based on the folder
                 df['Speech'] = df[filename_col].apply(
                     lambda p: 1 if '/speech/' in str(p).lower() else 0)
 
                 label_col = 'Speech'
                 self.logger.warning(
-                    "MUSAN GT sin columna de etiqueta: 'Speech' deducido "
-                    "por la carpeta (speech/music/noise).")
+                    "MUSAN GT has no label column: 'Speech' was inferred "
+                    "from the folder name (speech/music/noise).")
             else:
                 raise ValueError(
-                    f"Ground truth debe tener columnas (Chunk,Condition) "
-                    f"o (Filename,Speech). Encontrado: {list(df.columns)}")
+                    f"Ground truth must have columns (Chunk,Condition) "
+                    f"or (Filename,Speech). Found: {list(df.columns)}")
 
         # ------------------------------------------------------------------
-        # 2. Normalización del nombre de archivo (común a todos los casos)
+        # 2. Filename normalization (common to all cases)
         # ------------------------------------------------------------------
-        import re                                    # <-- necesario una vez
+        import re
         def normalize_filename(filename):
             filename = os.path.basename(filename)
-            # elimina sufijos de tasa + extensión
+            # removes rate suffixes + extension
             filename = re.sub(r'\.(16|48)kHz(\.wav)?$', '', filename,
                               flags=re.IGNORECASE)
             filename = re.sub(r'\.wav$', '', filename, flags=re.IGNORECASE)
@@ -374,11 +418,11 @@ class VADEvaluator:
         df['Filename_norm'] = df[filename_col].apply(normalize_filename)
         df['Label'] = df[label_col]
         
-        self.logger.info(f"📋 Ground truth: {len(df)} archivos, columnas: {filename_col}, {label_col}")
+        self.logger.info(f"📋 Ground truth: {len(df)} files, columns: {filename_col}, {label_col}")
         
-        # Debug: mostrar algunos ejemplos de normalización
+        # Debug: show some normalization examples
         if self.verbose and len(df) > 0:
-            self.logger.info("🔍 Ejemplos de normalización:")
+            self.logger.info("🔍 Normalization examples:")
             for i in range(min(3, len(df))):
                 orig = df[filename_col].iloc[i]
                 norm = df['Filename_norm'].iloc[i]
@@ -387,14 +431,19 @@ class VADEvaluator:
         return df[['Filename_norm', 'Label']]
     
     def _evaluate_model(self, model_name: str, gt_df: pd.DataFrame) -> Dict:
-        """Evaluar un modelo contra ground truth."""
-        self.logger.info(f"📊 Evaluando {model_name.upper()} contra ground truth...")
+        """!
+        @brief Evaluates a model's predictions against the ground truth.
+        @param model_name The name of the model.
+        @param gt_df The pandas DataFrame containing the ground truth.
+        @return A dictionary containing evaluation metrics (precision, recall, f1, etc.).
+        """
+        self.logger.info(f"📊 Evaluating {model_name.upper()} against ground truth...")
         
         masks_dir = self.results_dir / f"masks_{model_name}"
         mask_files = sorted(masks_dir.glob("mask_*.csv"))
         
         if not mask_files:
-            self.logger.warning(f"❌ No se encontraron máscaras para {model_name}")
+            self.logger.warning(f"❌ No masks found for {model_name}")
             return {}
         
         results = {
@@ -403,22 +452,22 @@ class VADEvaluator:
             'recall': [],
             'f1': [],
             'accuracy': [],
-            'predictions': {},  # Para debugging
+            'predictions': {},  # For debugging
         }
         
-        # 🔧 ARREGLADO: Contador de matches para debugging
+        # 🔧 FIXED: Match counter for debugging
         total_matches = 0
         
         for mask_file in mask_files:
-            # Extraer threshold del nombre del archivo
+            # Extract threshold from the filename
             threshold = float(mask_file.stem.split('_')[1])
             
-            # Cargar predicciones
+            # Load predictions
             pred_df = pd.read_csv(mask_file)
             
-            # Normalización robusta para predicciones también
+            # Robust normalization for predictions as well
             def normalize_prediction_filename(filename):
-                """Misma normalización robusta que en ground truth."""
+                """! Same robust normalization as in the ground truth."""
                 filename = os.path.basename(filename)
                 
                 extensions_to_remove = [
@@ -438,25 +487,25 @@ class VADEvaluator:
             
             pred_df['Filename_norm'] = pred_df['Filename'].apply(normalize_prediction_filename)
             
-            # 🔧 ARREGLADO: Debug del matching process
-            if threshold == 0.5 and self.verbose:  # Solo para threshold principal
-                self.logger.info(f"🔍 Debug matching para threshold {threshold}:")
-                self.logger.info(f"   GT tiene {len(gt_df)} archivos")
-                self.logger.info(f"   Predicciones tiene {len(pred_df)} archivos")
+            # 🔧 FIXED: Debug the matching process
+            if threshold == 0.5 and self.verbose:  # Only for the main threshold
+                self.logger.info(f"🔍 Debugging match process for threshold {threshold}:")
+                self.logger.info(f"   GT has {len(gt_df)} files")
+                self.logger.info(f"   Predictions have {len(pred_df)} files")
             
-            # Merge con ground truth
+            # Merge with ground truth
             merged = pd.merge(gt_df, pred_df, on='Filename_norm', how='inner')
             
             if merged.empty:
-                self.logger.warning(f"⚠️  No hay matches para threshold {threshold}")
+                self.logger.warning(f"⚠️  No matches found for threshold {threshold}")
                 continue
             else:
                 matches_count = len(merged)
                 total_matches += matches_count
-                if threshold == 0.5:  # Log solo para threshold principal
-                    self.logger.info(f"✅ {matches_count} matches encontrados para threshold {threshold}")
+                if threshold == 0.5:  # Log only for the main threshold
+                    self.logger.info(f"✅ {matches_count} matches found for threshold {threshold}")
             
-            # Calcular métricas
+            # Calculate metrics
             y_true = merged['Label'].astype(int)
             y_pred = merged['Speech'].astype(int)
             
@@ -471,34 +520,38 @@ class VADEvaluator:
             results['f1'].append(f1)
             results['accuracy'].append(accuracy)
             
-            # Guardar algunas predicciones para debugging
-            if threshold == 0.5:  # Solo para threshold principal
+            # Save some predictions for debugging
+            if threshold == 0.5:  # Only for the main threshold
                 results['predictions'][threshold] = merged[['Filename_norm', 'Label', 'Speech']].to_dict('records')
         
-        # 🔧 ARREGLADO: Log resumen de matches
+        # 🔧 FIXED: Log a summary of matches
         if total_matches > 0:
-            self.logger.info(f"📈 Total matches encontrados: {total_matches} (across all thresholds)")
+            self.logger.info(f"📈 Total matches found: {total_matches} (across all thresholds)")
         else:
-            self.logger.warning(f"⚠️ NO se encontraron matches en ningún threshold")
+            self.logger.warning(f"⚠️ NO matches were found for any threshold")
         
         return results
     
     def _print_predictions_vs_gt(self, model_name: str, predictions: List[Dict]):
-        """Imprimir predicciones vs ground truth para debugging."""
+        """!
+        @brief Prints a comparison of predictions vs. ground truth for debugging.
+        @param model_name The name of the model.
+        @param predictions A list of dictionaries, each containing a prediction record.
+        """
         if not predictions:
             return
             
-        self.logger.info(f"\n🔍 PREDICCIONES vs GROUND TRUTH - {model_name.upper()}")
+        self.logger.info(f"\n🔍 PREDICTIONS vs. GROUND TRUTH - {model_name.upper()}")
         self.logger.info("="*70)
-        self.logger.info(f"{'Archivo':<30} {'GT':<5} {'Pred':<5} {'Correcto':<10}")
+        self.logger.info(f"{'File':<30} {'GT':<5} {'Pred':<5} {'Correct':<10}")
         self.logger.info("-"*70)
         
         correct = 0
-        for pred in predictions[:10]:  # Solo primeros 10
+        for pred in predictions[:10]:  # Only first 10
             filename = pred['Filename_norm'][:27] + "..." if len(pred['Filename_norm']) > 30 else pred['Filename_norm']
             gt = pred['Label']
             prediction = pred['Speech']
-            is_correct = "✅ SÍ" if gt == prediction else "❌ NO"
+            is_correct = "✅ YES" if gt == prediction else "❌ NO"
             
             if gt == prediction:
                 correct += 1
@@ -507,23 +560,31 @@ class VADEvaluator:
         
         accuracy = correct / len(predictions[:10])
         self.logger.info("-"*70)
-        self.logger.info(f"Precisión en muestra: {accuracy:.2%} ({correct}/{len(predictions[:10])})")
+        self.logger.info(f"Accuracy on sample: {accuracy:.2%} ({correct}/{len(predictions[:10])})")
         self.logger.info("="*70)
     
     def _save_results(self, model_name: str, results: Dict):
-        """Guardar resultados en JSON."""
+        """!
+        @brief Saves the evaluation results to a JSON file.
+        @param model_name The name of the model.
+        @param results A dictionary with the evaluation results.
+        """
         results_file = self.results_dir / f"metrics_{model_name}.json"
         
-        # Preparar datos para JSON (sin las predicciones detalladas)
+        # Prepare data for JSON (without detailed predictions)
         json_results = {k: v for k, v in results.items() if k != 'predictions'}
         
         with open(results_file, 'w') as f:
             json.dump(json_results, f, indent=2)
         
-        self.logger.info(f"💾 Métricas guardadas: {results_file}")
+        self.logger.info(f"💾 Metrics saved to: {results_file}")
     
     def _generate_plots(self, model_name: str, results: Dict):
-        """Generar gráficos de performance."""
+        """!
+        @brief Generates performance plots for a model.
+        @param model_name The name of the model.
+        @param results A dictionary with the evaluation results.
+        """
         if not results.get('thresholds'):
             return
             
@@ -531,53 +592,53 @@ class VADEvaluator:
         
         thresholds = results['thresholds']
         
-        # 1. Precision vs Threshold
+        # 1. Precision vs. Threshold
         ax1.plot(thresholds, results['precision'], 'b-o', label='Precision')
         ax1.set_xlabel('Threshold')
         ax1.set_ylabel('Precision')
-        ax1.set_title(f'{model_name.upper()} - Precision vs Threshold')
+        ax1.set_title(f'{model_name.upper()} - Precision vs. Threshold')
         ax1.grid(True, alpha=0.3)
         ax1.set_ylim(0, 1)
         
-        # 2. Recall vs Threshold
+        # 2. Recall vs. Threshold
         ax2.plot(thresholds, results['recall'], 'g-o', label='Recall')
         ax2.set_xlabel('Threshold')
         ax2.set_ylabel('Recall')
-        ax2.set_title(f'{model_name.upper()} - Recall vs Threshold')
+        ax2.set_title(f'{model_name.upper()} - Recall vs. Threshold')
         ax2.grid(True, alpha=0.3)
         ax2.set_ylim(0, 1)
         
-        # 3. F1 vs Threshold
+        # 3. F1 vs. Threshold
         ax3.plot(thresholds, results['f1'], 'r-o', label='F1-Score')
         ax3.set_xlabel('Threshold')
         ax3.set_ylabel('F1-Score')
-        ax3.set_title(f'{model_name.upper()} - F1-Score vs Threshold')
+        ax3.set_title(f'{model_name.upper()} - F1-Score vs. Threshold')
         ax3.grid(True, alpha=0.3)
         ax3.set_ylim(0, 1)
         
-        # 4. Todas las métricas juntas
+        # 4. All metrics together
         ax4.plot(thresholds, results['precision'], 'b-o', label='Precision', alpha=0.7)
         ax4.plot(thresholds, results['recall'], 'g-o', label='Recall', alpha=0.7)
         ax4.plot(thresholds, results['f1'], 'r-o', label='F1-Score', alpha=0.7)
         ax4.plot(thresholds, results['accuracy'], 'm-o', label='Accuracy', alpha=0.7)
         ax4.set_xlabel('Threshold')
         ax4.set_ylabel('Score')
-        ax4.set_title(f'{model_name.upper()} - Todas las Métricas')
+        ax4.set_title(f'{model_name.upper()} - All Metrics')
         ax4.legend()
         ax4.grid(True, alpha=0.3)
         ax4.set_ylim(0, 1)
         
         plt.tight_layout()
         
-        # Guardar gráfico
+        # Save plot
         plot_file = self.results_dir / f"plot_{model_name}.png"
         plt.savefig(plot_file, dpi=300, bbox_inches='tight')
         plt.close()
         
-        self.logger.info(f"📈 Gráfico guardado: {plot_file}")
+        self.logger.info(f"📈 Plot saved to: {plot_file}")
     
     def _generate_comparison_plot(self):
-        """Generar gráfico comparativo de todos los modelos."""
+        """! @brief Generates a comparison plot for all evaluated models. """
         if len(self.all_results) < 2:
             return
             
@@ -592,26 +653,26 @@ class VADEvaluator:
         
         plt.xlabel('Threshold', fontsize=12)
         plt.ylabel('F1-Score', fontsize=12)
-        plt.title('Comparación F1-Score por Modelo', fontsize=14, fontweight='bold')
+        plt.title('F1-Score Comparison Across Models', fontsize=14, fontweight='bold')
         plt.legend(fontsize=11)
         plt.grid(True, alpha=0.3)
         plt.ylim(0, 1)
         
-        # Guardar gráfico comparativo
+        # Save comparison plot
         comparison_plot = self.results_dir / "comparison_all_models.png"
         plt.savefig(comparison_plot, dpi=300, bbox_inches='tight')
         plt.close()
         
-        self.logger.info(f"📊 Gráfico comparativo guardado: {comparison_plot}")
+        self.logger.info(f"📊 Comparison plot saved to: {comparison_plot}")
     
     def _print_final_summary(self):
-        """Imprimir resumen final de todos los modelos."""
+        """! @brief Prints a final summary table comparing all models. """
         if not self.all_results:
             return
             
-        self.logger.info(f"\n🎯 RESUMEN FINAL - COMPARACIÓN DE MODELOS")
+        self.logger.info(f"\n🎯 FINAL SUMMARY - MODEL COMPARISON")
         self.logger.info("="*80)
-        self.logger.info(f"{'Modelo':<15} {'Mejor F1':<12} {'@ Threshold':<12} {'Mejor Precisión':<15} {'Mejor Recall':<12}")
+        self.logger.info(f"{'Model':<15} {'Best F1':<12} {'@ Threshold':<12} {'Best Precision':<15} {'Best Recall':<12}")
         self.logger.info("-"*80)
         
         for model_name, results in self.all_results.items():
@@ -631,21 +692,20 @@ class VADEvaluator:
         self.logger.info("="*80)
     
     def run_evaluation(self):
-        """Ejecutar evaluación completa."""
+        """! @brief Executes the complete evaluation workflow. """
         start_time = time.time()
         
-        # Configuración
+        # Configuration
         max_files = self.config['test_settings']['max_files']
         thresholds = self.config['test_settings']['thresholds']
         
-        # Buscar dataset disponible
+        # Find an available dataset
         dataset_name = None
         audio_files = []
         gt_path = None
         datasets_dict = (self.config.get('datasets') or self.config.get('scenarios'))
         if datasets_dict is None:
-            raise KeyError("La configuración debe tener una clave 'datasets' "
-                        "o 'scenarios' al nivel raíz.")
+            raise KeyError("Configuration must have a 'datasets' or 'scenarios' key at the root level.")
         for name, dataset_config in datasets_dict.items():
             dataset_path = self.base_path / dataset_config['chunks_path']
             if dataset_path.exists():
@@ -655,92 +715,95 @@ class VADEvaluator:
                 break
         
         if not audio_files:
-            self.logger.error("❌ No se encontraron archivos de audio")
+            self.logger.error("❌ No audio files found")
             return
         
-        # Cargar ground truth
+        # Load ground truth
         if not os.path.exists(gt_path):
-            self.logger.error(f"❌ Ground truth no encontrado: {gt_path}")
+            self.logger.error(f"❌ Ground truth not found: {gt_path}")
             return
             
         gt_df = self._load_ground_truth(gt_path)
-        self.logger.info(f"📋 Ground truth cargado: {len(gt_df)} archivos")
+        self.logger.info(f"📋 Ground truth loaded: {len(gt_df)} files")
         
-        # Evaluar cada modelo
+        # Evaluate each model
         for model_name, model_config in self.config['models'].items():
             if not model_config.get('enabled', True):
-                self.logger.info(f"⏭️  Modelo {model_name} deshabilitado, saltando...")
+                self.logger.info(f"⏭️  Model {model_name} is disabled, skipping...")
                 continue
             
             self.logger.info(f"\n{'='*60}")
-            self.logger.info(f"🤖 PROCESANDO MODELO: {model_name.upper()}")
+            self.logger.info(f"🤖 PROCESSING MODEL: {model_name.upper()}")
             self.logger.info(f"{'='*60}")
             
-            # 1. Verificar si existe inferencia previa
+            # 1. Check if previous inference exists
             if self._masks_exist(model_name):
-                self.logger.info(f"✅ Máscaras encontradas para {model_name}, saltando inferencia")
+                self.logger.info(f"✅ Masks found for {model_name}, skipping inference")
             else:
-                # 2. Cargar wrapper y hacer inferencia
+                # 2. Load wrapper and run inference
                 wrapper = self._load_wrapper(model_config['wrapper'])
                 if wrapper is None:
-                    self.logger.error(f"❌ No se pudo cargar wrapper para {model_name}")
+                    self.logger.error(f"❌ Could not load wrapper for {model_name}")
                     continue
                 
-                self.logger.info(f"✅ Wrapper cargado: {wrapper}")
+                self.logger.info(f"✅ Wrapper loaded: {wrapper}")
                 
                 success = self._run_inference(model_name, wrapper, audio_files, thresholds)
                 if not success:
-                    self.logger.error(f"❌ Inferencia falló para {model_name}")
+                    self.logger.error(f"❌ Inference failed for {model_name}")
                     continue
             
-            # 3. Evaluar contra ground truth
+            # 3. Evaluate against ground truth
             results = self._evaluate_model(model_name, gt_df)
             if not results:
                 continue
             
-            # 4. Mostrar predicciones vs GT para debugging
+            # 4. Show predictions vs. GT for debugging
             if 0.5 in results.get('predictions', {}):
                 self._print_predictions_vs_gt(model_name, results['predictions'][0.5])
             
-            # 5. Guardar resultados
+            # 5. Save results
             self._save_results(model_name, results)
             
-            # 6. Generar gráficos
+            # 6. Generate plots
             self._generate_plots(model_name, results)
             
-            # Guardar para resumen final
+            # Save for the final summary
             self.all_results[model_name] = results
             
-            # Log métricas principales
+            # Log main metrics
             if results.get('f1'):
                 best_f1_idx = np.argmax(results['f1'])
                 best_f1 = results['f1'][best_f1_idx]
                 best_thresh = results['thresholds'][best_f1_idx]
-                self.logger.info(f"🎯 Mejor F1: {best_f1:.3f} @ threshold {best_thresh:.2f}")
+                self.logger.info(f"🎯 Best F1: {best_f1:.3f} @ threshold {best_thresh:.2f}")
         
-        # 7. Gráfico comparativo y resumen final
+        # 7. Comparison plot and final summary
         self._generate_comparison_plot()
         self._print_final_summary()
         
         total_time = time.time() - start_time
-        self.logger.info(f"\n✅ Evaluación completada en {total_time:.1f} segundos")
-        self.logger.info(f"📁 Resultados guardados en: {self.results_dir}")
+        self.logger.info(f"\n✅ Evaluation completed in {total_time:.1f} seconds")
+        self.logger.info(f"📁 Results saved in: {self.results_dir}")
 
 
 def main():
+    """!
+    @brief Main function to parse arguments and run the VAD evaluation.
+    """
     import argparse
     
-    parser = argparse.ArgumentParser(description='Evaluación completa de modelos VAD')
+    parser = argparse.ArgumentParser(description='Complete evaluation of VAD models')
     parser.add_argument('--config', default='config_test.yaml', 
-                       help='Archivo de configuración YAML')
+                       help='YAML configuration file')
     parser.add_argument('--verbose', action='store_true', 
-                       help='Mostrar output detallado')
+                       help='Enable detailed verbose output')
     parser.add_argument('--mode', choices=['prototype', 'full'], default='prototype',
-                       help='Modo de evaluación (prototype: pocos archivos, full: todos)')
+                       help='Evaluation mode (prototype: few files, full: all files)')
     
     args = parser.parse_args()
     
-    # Crear evaluador y ejecutar
+    # Create evaluator and run
     evaluator = VADEvaluator(args.config, verbose=args.verbose)
     evaluator.run_evaluation()
 

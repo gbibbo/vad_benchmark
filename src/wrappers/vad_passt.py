@@ -1,8 +1,9 @@
-from pathlib import Path
-# src/wrappers/vad_passt.py
+"""!
+@file vad_passt.py
+@brief PaSST VAD wrapper - silent version.
 
-"""
-PaSST VAD wrapper — versión silenciosa
+@details This wrapper is designed to suppress the verbose output from the
+         original PaSST model during loading and inference.
 """
 
 from pathlib import Path
@@ -12,10 +13,11 @@ import sys
 from io import StringIO
 import contextlib
 
-# Suprimir outputs verbosos
 @contextlib.contextmanager
 def suppress_stdout():
-    """Suprimir stdout temporalmente"""
+    """!
+    @brief A context manager to temporarily suppress stdout.
+    """
     old_stdout = sys.stdout
     try:
         sys.stdout = StringIO()
@@ -23,19 +25,24 @@ def suppress_stdout():
     finally:
         sys.stdout = old_stdout
 
-# Import con supresión
+# Import with suppression to avoid verbose model loading messages
 with suppress_stdout():
     from hear21passt.base import load_model
 
 # ---------------------------------------------------------------------
-# Mini-base para imitar los otros wrappers
+# Mini-base class to mimic other wrappers
 # ---------------------------------------------------------------------
 class BaseVADWrapper:
+    """! @brief A minimal base class to align with the structure of other VAD wrappers. """
     def __init__(self, device: str = "cpu"):
+        """!
+        @brief Initializes the base wrapper.
+        @param device The compute device to use ("cpu" or "cuda").
+        """
         self.device = device
 
 # ---------------------------------------------------------------------
-# CSV de etiquetas
+# Label Definitions
 # ---------------------------------------------------------------------
 LABELS_CSV = Path(__file__).resolve().parent.parent.parent / 'models' / 'metadata' / 'class_labels_indices.csv'
 
@@ -43,7 +50,7 @@ with open(LABELS_CSV) as f:
     reader = csv.DictReader(f)
     ALL_LABELS = [row["display_name"].strip('"') for row in reader]
 
-# Etiquetas de voz/canto
+# Speech/singing related labels
 SPEECH_LABELS = {
     "Speech", "Singing", "Male singing", "Female singing", "Child singing",
     "Male speech, man speaking", "Female speech, woman speaking",
@@ -52,28 +59,45 @@ SPEECH_LABELS = {
 SPEECH_IDXS = [i for i, lbl in enumerate(ALL_LABELS) if lbl in SPEECH_LABELS]
 
 # ---------------------------------------------------------------------
-# Wrapper PaSST silencioso
+# Silent PaSST Wrapper
 # ---------------------------------------------------------------------
 class PaSSTWrapper(BaseVADWrapper):
+    """!
+    @brief A VAD wrapper for the PaSST model that suppresses its verbose output.
+    """
     target_sr = 32_000
 
     def __init__(self, device: str = "cpu"):
+        """!
+        @brief Initializes the PaSST wrapper, loading the model silently.
+        @param device The compute device to use ("cpu" or "cuda").
+        """
         super().__init__(device)
-        # Cargar modelo con supresión completa
+        # Load the model with full output suppression.
         with suppress_stdout():
-            print("Loading PASST (silent mode)...")  # Solo esto se ve
+            print("Loading PASST (silent mode)...")
             self.model = load_model(mode="logits").to(self.device).eval()
         self.sigmoid = torch.nn.Sigmoid()
 
     @torch.no_grad()
     def infer(self, wav_path: str) -> torch.Tensor:
+        """!
+        @brief Performs VAD inference on a single audio file.
+        
+        @details It loads an audio file, resamples it if necessary, and then runs
+                 the PaSST model to get a single probability score for the presence
+                 of speech or singing.
+                 
+        @param wav_path Path to the input audio file.
+        @return A torch.Tensor containing a single float value representing the speech probability.
+        """
         wav, sr = torchaudio.load(wav_path)
         if sr != self.target_sr:
             wav = torchaudio.functional.resample(wav, sr, self.target_sr)
 
         wav = torch.clamp(wav.mean(0, keepdim=True), -1.0, 1.0).to(self.device)
         
-        # Inferencia con supresión de debug prints
+        # Inference with suppression of debug prints.
         with suppress_stdout():
             logits = self.model(wav)[0]
         

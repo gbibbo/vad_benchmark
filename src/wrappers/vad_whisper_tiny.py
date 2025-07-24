@@ -1,7 +1,9 @@
-# src/wrappers/vad_whisper_tiny.py
-"""
-Whisper-tiny VAD wrapper: marca como "speech" cada segmento que Whisper
-devuelve con timestamps.  El audio de entrada DEBE ser 16 kHz.
+"""!
+@file vad_whisper_tiny.py
+@brief A VAD wrapper using the Whisper-tiny model.
+
+@details This wrapper marks as "speech" every segment that Whisper identifies
+         with timestamps. The input audio MUST be 16 kHz.
 """
 
 import numpy as np
@@ -9,22 +11,35 @@ import soundfile as sf
 from faster_whisper import WhisperModel
 
 
-class WhisperTinyVADWrapper:                # ← Nombre específico para evitar conflictos
-    """Binary VAD basado en Whisper-tiny."""
+class WhisperTinyVADWrapper:
+    """!
+    @brief A binary VAD implementation based on the Whisper-tiny model.
+    @note The class is named specifically to avoid conflicts with other potential wrappers.
+    """
 
     def __init__(self, model_size: str = "tiny"):
+        """!
+        @brief Initializes the Whisper VAD wrapper.
+        @param model_size The size of the Whisper model to load (e.g., "tiny").
+                          This is a required argument for the underlying WhisperModel.
+        """
         self.sr = 16_000
-        print(f"[Whisper-Tiny] Inicializando modelo {model_size}")
-        # ¡ARGUMENTO OBLIGATORIO!
+        print(f"[Whisper-Tiny] Initializing model {model_size}")
+        # This argument is mandatory for WhisperModel
         self.model = WhisperModel(model_size, device="cpu", compute_type="int8")
-        print(f"[Whisper-Tiny] Modelo {model_size} cargado exitosamente")
+        print(f"[Whisper-Tiny] Model {model_size} loaded successfully")
 
-    # ------------------------------------------------------------------ #
     def infer(self, wav_path: str, frame_ms: int = 10) -> np.ndarray:
+        """!
+        @brief Performs VAD inference by generating a binary mask from Whisper's segments.
+        @param wav_path Path to the 16 kHz input audio file.
+        @param frame_ms The duration of each frame in milliseconds for the output mask.
+        @return A numpy array of 0s and 1s, where 1 indicates speech.
+        """
         wav, sr = sf.read(wav_path, dtype="float32")
         assert sr == self.sr, f"Input must be 16 kHz, got {sr}"
 
-        # Duración para debug
+        # Duration for debugging purposes
         duration = len(wav) / sr
         print(f"Processing audio with duration {duration/60:02.0f}:{duration%60:04.1f}")
 
@@ -44,7 +59,7 @@ class WhisperTinyVADWrapper:                # ← Nombre específico para evitar
         return out
 
 
-# Compatibilidad con el wrapper original
+# Alias for backwards compatibility with the original wrapper name
 WhisperVADWrapper = WhisperTinyVADWrapper
 
 __all__ = ["WhisperTinyVADWrapper", "WhisperVADWrapper"]
