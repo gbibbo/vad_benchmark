@@ -7,7 +7,9 @@ This repository contains code and evaluation tools for the paper:
 Centre for Vision Speech & Signal Processing (CVSSP), University of Surrey, UK  
 Detection and Classification of Acoustic Scenes and Events (DCASE) 2025
 
-## Quick Start
+## Installation
+
+### Option 1: Automatic Installation (Recommended)
 
 ```bash
 # 1. Install everything (creates environment + downloads model weights ~500MB)
@@ -18,8 +20,36 @@ source activate_vad.sh
 
 # 3. Test installation
 python test_installation.py
+```
 
-# 4. Run demo evaluation
+### Option 2: Manual Installation
+
+#### 1. Install PyTorch (CPU by default)
+
+Install PyTorch according to your platform (official guide):
+
+```bash
+pip install --index-url https://download.pytorch.org/whl/cpu torch torchaudio torchvision
+```
+
+#### 2. Install remaining dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+> **Note**: If `soundfile` gives an error about `libsndfile`, check the official documentation; on some distributions you may need to install `libsndfile` from your system package manager.
+
+#### 3. Test installation
+
+```bash
+python test_installation.py
+```
+
+## Quick Start
+
+```bash
+# Run demo evaluation
 python scripts/run_evaluation.py --config configs/config_demo.yaml
 ```
 

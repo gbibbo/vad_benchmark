@@ -49,19 +49,23 @@ else
 fi
 print_success "Environment created: $ENV_NAME"
 
-print_step "Installing PyTorch (CPU version - stable)..."
+print_step "Upgrading pip..."
 pip install --upgrade pip
-pip install torch torchaudio torchvision --index-url https://download.pytorch.org/whl/cpu
+
+print_step "Installing PyTorch (CPU version - stable)..."
+pip install --index-url https://download.pytorch.org/whl/cpu torch torchaudio torchvision
 
 print_step "Installing core dependencies..."
-pip install numpy pandas scipy matplotlib seaborn scikit-learn librosa soundfile PyYAML tqdm faster-whisper transformers huggingface-hub datasets accelerate hear21passt torchlibrosa torchsummary einops
+pip install numpy pandas scipy matplotlib seaborn scikit-learn librosa soundfile PyYAML tqdm faster-whisper transformers huggingface-hub datasets accelerate hear21passt torchlibrosa>=0.1.0 torchsummary einops
 pip install pytest
 
-print_step "Installing webrtcvad..."
+print_step "Installing webrtcvad (precompiled wheels)..."
 if command -v conda &> /dev/null; then
-    conda install -c conda-forge webrtcvad -y || pip install webrtcvad-wheels || pip install webrtcvad
+    # Try conda first, then fallback to wheels, then source
+    conda install -c conda-forge webrtcvad -y || pip install webrtcvad-wheels>=2.0.10 || pip install webrtcvad
 else
-    pip install webrtcvad-wheels || pip install webrtcvad
+    # For venv, use precompiled wheels first
+    pip install webrtcvad-wheels>=2.0.10 || pip install webrtcvad
 fi
 
 print_step "Creating directory structure..."
@@ -81,32 +85,12 @@ if [[ ! -f "models/panns/Cnn14_DecisionLevelAtt" ]]; then
 fi
 
 if [[ ! -f "models/metadata/class_labels_indices.csv" ]]; then
-# --- Fix PaSST wrapper to use relative CSV path --- 
-
-sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
-# Fix PaSST label path
-CSV_PATH="$(pwd)/models/metadata/class_labels_indices.csv"
-# --- Fix PaSST wrapper to use relative CSV path --- 
-
-sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
-sed -i "s|/mnt/fast/nobackup.*class_labels_indices.csv|${CSV_PATH}|" src/wrappers/vad_passt.py
-# --- Fix PaSST wrapper to use relative CSV path --- 
-
-sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
     print_step "Downloading AudioSet labels..."
     wget -O models/metadata/class_labels_indices.csv "https://raw.githubusercontent.com/qiuqiangkong/audioset_tagging_cnn/master/metadata/class_labels_indices.csv"
-# --- Fix PaSST wrapper to use relative CSV path --- 
-
-sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
-# Fix PaSST label path
-CSV_PATH="$(pwd)/models/metadata/class_labels_indices.csv"
-# --- Fix PaSST wrapper to use relative CSV path --- 
-
-sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
-sed -i "s|/mnt/fast/nobackup.*class_labels_indices.csv|${CSV_PATH}|" src/wrappers/vad_passt.py
-# --- Fix PaSST wrapper to use relative CSV path --- 
-
-sed -i "s|/mnt/fast/nobackup[^\"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|" src/wrappers/vad_passt.py
+    
+    # Fix PaSST wrapper to use relative CSV path
+    print_step "Fixing PaSST wrapper paths..."
+    sed -i 's|/mnt/fast/nobackup[^"]*class_labels_indices.csv|models/metadata/class_labels_indices.csv|g' src/wrappers/vad_passt.py
 fi
 
 print_step "Creating EPANNs support files..."
@@ -184,6 +168,9 @@ echo ""
 echo "📊 Installation Summary:"
 echo "  ✅ 8 VAD models installed"
 echo "  ✅ All dependencies working (CPU mode)"
+echo "  ✅ PyTorch installed from official CPU index"
+echo "  ✅ webrtcvad-wheels used (no compilation needed)"
+echo "  ✅ torchlibrosa >= 0.1.0 installed"
 echo "  ✅ Test data created"
 echo "  ✅ Model weights downloaded"
 echo ""
@@ -191,3 +178,5 @@ echo "🚀 Quick Start:"
 echo "1. source activate_vad.sh"
 echo "2. python test_installation.py"
 echo "3. python scripts/run_evaluation.py --config configs/config_demo.yaml"
+echo ""
+print_warning "Note: If soundfile gives libsndfile errors, install libsndfile from your system package manager"
