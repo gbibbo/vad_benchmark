@@ -3,6 +3,11 @@ import os, sys
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if _ROOT not in sys.path: sys.path.insert(0, _ROOT)
 # --- VAD-Benchmark sys.path guard ---
+# --- Import hygiene for 'models' shadowing ---
+import sys
+if 'models' in sys.modules and not getattr(sys.modules['models'], '__path__', None):
+    del sys.modules['models']
+# --- end hygiene ---
 """!
 @file run_evaluation.py
 @brief Master script for the complete evaluation of VAD models.

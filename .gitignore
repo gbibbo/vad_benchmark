@@ -50,3 +50,8 @@ analysis/data/results_MUSAN/evaluation_20250708_170811.log
 *.tmp
 *.log
 .DS_Store
+*.pyc
+runs/
+outputs/
+artifacts/
+chime_home.tar.gz

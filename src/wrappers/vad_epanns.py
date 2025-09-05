@@ -1,3 +1,27 @@
+# --- FORCE REPO MODELS PACKAGE (idempotent) ---
+import sys, types
+from pathlib import Path
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+m = sys.modules.get('models')
+if m is not None and not getattr(m, '__path__', None):
+    # Había un models.py de terceros: eliminarlo del cache
+    del sys.modules['models']
+# Asegurar que 'models' apunta a <repo>/models como paquete
+if 'models' not in sys.modules:
+    pkg = types.ModuleType('models')
+    pkg.__path__ = [str(_REPO_ROOT / 'models')]
+    sys.modules['models'] = pkg
+# --- END FORCE REPO MODELS PACKAGE ---
+# --- E-PANNs import hygiene ---
+import os, sys
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+if 'models' in sys.modules and not getattr(sys.modules['models'], '__path__', None):
+    del sys.modules['models']
+# --- end hygiene ---
 """!
 @file vad_epanns.py
 @brief A VAD wrapper for the E-PANNs model, adapted from its original source code.
@@ -18,13 +42,31 @@ if epanns_path not in sys.path:
     sys.path.insert(0, epanns_path)
 
 # Import from the existing E-PANNs files
-from models.epanns import Cnn14_pruned
-from models.epanns import move_data_to_device
+from models.epanns.models import Cnn14_pruned
+from models.epanns.utils import move_data_to_device
 
 # Manually import AudioModelInference components to avoid relative import issues
 import torch
 import numpy as np
 import librosa
+
+# --- EPANNS flexible constructor ---
+import inspect
+def _epanns_constructor_kwargs():
+    base = dict(sample_rate=32000, window_size=1024, hop_size=320,
+                mel_bins=64, fmin=50, fmax=14000, classes_num=527)
+    # Valores por defecto usados por algunas variantes E-PANNs.
+    p = dict(p1=0, p2=0, p3=0, p4=0, p5=0, p6=0,
+             p7=0.5, p8=0.5, p9=0.5, p10=0.5, p11=0.5, p12=0.5)
+    sig = inspect.signature(Cnn14_pruned.__init__)
+    allowed = set(sig.parameters) - {'self'}
+    kwargs = {k: v for k, v in {**base, **p}.items() if k in allowed}
+    return kwargs
+
+def _build_epanns_model():
+    return Cnn14_pruned(**_epanns_constructor_kwargs())
+# --- end flexible constructor ---
+
 
 class AudioModelInference:
     """! @brief A simplified copy of the AudioModelInference class from the E-PANNs project. """
@@ -79,7 +121,7 @@ class AudioModelInference:
         audio = wav_arr[None, :]
         audio = move_data_to_device(audio, device='cpu')
         with torch.no_grad():
-            preds = self.model(audio, None).to("cpu").numpy().squeeze(axis=0)
+            preds = self.model(audio).to("cpu").numpy().squeeze(axis=0)
         return preds
 
 # Reuse labels from PANNs
@@ -115,12 +157,7 @@ class EPANNsVADWrapper:
 
     def _load_model(self):
         """! @brief Loads the E-PANNs model from the specified checkpoint. """
-        model = Cnn14_pruned(
-            sample_rate=32000, window_size=1024, hop_size=320, mel_bins=64,
-            fmin=50, fmax=14000, classes_num=527,
-            p1=0, p2=0, p3=0, p4=0, p5=0, p6=0,
-            p7=0.5, p8=0.5, p9=0.5, p10=0.5, p11=0.5, p12=0.5
-        )
+        model = _build_epanns_model()
         
         checkpoint = torch.load(self.checkpoint, map_location='cpu')
         model.load_state_dict(checkpoint, strict=False)
