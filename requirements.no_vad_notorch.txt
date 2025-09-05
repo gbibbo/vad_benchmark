@@ -5,11 +5,8 @@ soundfile>=0.12.0
 numpy>=1.21.0
 
 # VAD-specific models
-webrtcvad-wheels>=2.0.10
 faster-whisper>=0.9.0
 hear21passt>=0.0.26
-torchlibrosa>=0.1.0
-torchsummary>=1.5.1
 
 # Data processing
 pandas>=1.5.0
@@ -25,4 +22,3 @@ einops>=0.8.0
 huggingface-hub>=0.15.0
 datasets>=2.0.0
 accelerate>=0.20.0
-torchlibrosa>=0.0.9

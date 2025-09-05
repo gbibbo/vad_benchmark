@@ -1,4 +1,4 @@
-#!/bin/bash
-eval "$(conda shell.bash hook)"
-conda activate vad_benchmark_fresh
-echo "🚀 VAD-Benchmark environment activated: $CONDA_DEFAULT_ENV"
+#!/usr/bin/env bash
+conda activate vad_benchmark_py310
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+echo "VAD-Benchmark environment activated: $(python -V)"

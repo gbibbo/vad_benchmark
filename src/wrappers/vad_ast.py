@@ -21,7 +21,7 @@ class ASTWrapper(BaseVADWrapper):
     @brief Audio Spectrogram Transformer (AST) wrapper class.
     """
 
-    //!< Set of labels considered as speech or singing.
+    # Set of labels considered as speech or singing.
     SPEECH_LABELS = {
         "Speech", "Singing", "Male singing", "Female singing", "Child singing",
         "Male speech, man speaking", "Female speech, woman speaking",

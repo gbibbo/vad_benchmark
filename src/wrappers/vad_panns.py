@@ -23,7 +23,7 @@ if models_path not in sys.path:
 
 from models.panns.inference import run_panns_inference
 
-//!< Set of labels from AudioSet that are considered as speech.
+# Set of labels from AudioSet that are considered as speech.
 SPEECH_TAGS = {
     "Speech", "Singing", "Male singing", "Female singing", "Child singing",
     "Male speech, man speaking", "Female speech, woman speaking",
