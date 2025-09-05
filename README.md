@@ -7,22 +7,34 @@ This repository contains code and evaluation tools for the paper:
 Centre for Vision Speech & Signal Processing (CVSSP), University of Surrey, UK  
 Detection and Classification of Acoustic Scenes and Events (DCASE) 2025
 
-## Installation
+## Requisitos
+- Python **3.10** (recomendado con conda)
+- PyTorch instalado **según tu plataforma** (CPU por defecto) usando el índice oficial de PyTorch  
+- Resto de dependencias vía `requirements.txt`
 
-### Option 1: Automatic Installation (Recommended)
+> PyTorch se instala desde su índice oficial (CPU/CUDA/ROCm). No fijamos PyTorch en `requirements.txt` para evitar incompatibilidades entre plataformas.
 
+## Instalación rápida (automática)
 ```bash
-# 1. Install everything (creates environment + downloads model weights ~500MB)
-./install.sh
-
-# 2. Activate environment  
-source activate_vad.sh
-
-# 3. Test installation
+git clone https://github.com/gbibbo/vad_benchmark.git
+cd vad_benchmark
+chmod +x install.sh
+./install.sh              # crea el entorno py310 e instala deps (no descarga datasets)
+source activate_vad.sh    # activa el entorno y exporta PYTHONPATH
 python test_installation.py
 ```
 
-### Option 2: Manual Installation
+## (Opcional) Reusar datasets y modelos ya descargados
+Si ya tienes carpetas grandes (p.ej. `datasets/chime` o `models/`), puedes **reutilizarlas** para evitar descargas:
+
+```bash
+# desde la raíz del repo nuevo
+ln -s /ruta/a/tu/otro/repo/models models               # reutiliza pesos/modelos
+mkdir -p datasets
+ln -s /ruta/a/tu/otro/repo/datasets/chime datasets/chime  # reutiliza CHiME (~3.9GB)
+```
+
+### Manual Installation (Alternative)
 
 #### 1. Install PyTorch (CPU by default)
 
@@ -48,9 +60,14 @@ python test_installation.py
 
 ## Quick Start
 
+## Ejecutar demos/experimentos
 ```bash
-# Run demo evaluation
+# demo corto
 python scripts/run_evaluation.py --config configs/config_demo.yaml
+
+# escenarios del paper (CMF / CMFV)
+python scripts/run_evaluation.py --config configs/config_chime_cmf.yaml
+python scripts/run_evaluation.py --config configs/config_chime_cmfv.yaml
 ```
 
 ## CHiME-Home Dataset Setup
@@ -61,6 +78,13 @@ To reproduce the exact paper results, you need the CHiME-Home dataset:
 
 Get the CHiME-Home dataset from the CHiME Challenge website:
 
+## Descargar CHiME (solo si no lo tienes)
+```bash
+chmod +x download_chime.sh
+./download_chime.sh
+```
+
+Or manually:
 ```bash
 # Create dataset directory
 mkdir -p datasets/chime/chunks
@@ -198,6 +222,9 @@ analysis/data/Figures/
 - **Threshold tests**: How models behave across different VAD thresholds
 - **ROC/PR Curves**: Detailed classification metrics
 
+## Notas de compatibilidad
+- `webrtcvad` se instala como **`webrtcvad-wheels`** para usar ruedas precompiladas (sin compilar C).  
+- `soundfile` usa **libsndfile**; en algunos sistemas esta librería del SO puede ser necesaria.
 
 ## Project Structure
 
@@ -224,7 +251,7 @@ vad_benchmark/
 
 ## System Requirements
 
-- **Python**: 3.9+
+- **Python**: 3.10+
 - **Storage**: 2GB (models + dependencies)
 - **Memory**: 4GB RAM recommended
 - **OS**: Linux, macOS, Windows (WSL supported)
