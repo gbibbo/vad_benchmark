@@ -1,0 +1,67 @@
+project:
+  base_path: .
+test_settings:
+  max_files: 0
+  thresholds:
+  - 0.1
+  - 0.2
+  - 0.3
+  - 0.4
+  - 0.5
+  - 0.6
+  - 0.7
+  - 0.8
+  - 0.9
+models:
+  silero:
+    wrapper: src.wrappers.vad_silero
+    vad_type: probabilistic
+    enabled: true
+  webrtc:
+    wrapper: src.wrappers.vad_webrtc
+    enabled: true
+  whisper_tiny:
+    wrapper: src.wrappers.vad_whisper_tiny
+    enabled: true
+  whisper_small:
+    wrapper: src.wrappers.vad_whisper_small
+    enabled: true
+  ast:
+    wrapper: src.wrappers.vad_ast
+    vad_type: probabilistic
+    enabled: true
+  panns:
+    wrapper: src.wrappers.vad_panns
+    vad_type: probabilistic
+    enabled: true
+  epanns:
+    wrapper: src.wrappers.vad_epanns
+    vad_type: probabilistic
+    enabled: true
+  passt:
+    wrapper: src.wrappers.vad_passt
+    vad_type: probabilistic
+    enabled: true
+scenarios:
+  chime_cmf:
+    description: 'CHiME-Home: Human speech detection (CMF) - Paper reproduction'
+    chunks_path: datasets/chime/chunks_subset5
+    ground_truth: ground_truth/chime/cmf.csv
+thresholds: &id001
+- 0.05
+- 0.1
+- 0.15
+- 0.2
+- 0.25
+- 0.3
+- 0.4
+- 0.5
+iou_thresholds: &id002
+- 0.1
+- 0.2
+- 0.3
+evaluation:
+  thresholds: *id001
+  iou_thresholds: *id002
+  overlap_thresholds: *id002
+  matching_thresholds: *id002
