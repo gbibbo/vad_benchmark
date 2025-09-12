@@ -1,56 +1,92 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# -------- Config ----------
-ENV_NAME="${ENV_NAME:-vad_benchmark_py310}"
-PY_VER="${PY_VER:-3.10}"
-TORCH_INDEX_URL="${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cpu}"  # CPU por defecto
-# --------------------------
+# -----------------------------------------------------------------------------
+# VAD Benchmark - Instalador con limpieza de audios a 48 kHz
+# - Descarga datasets (si tu repositorio ya los descarga, se usarán esos pasos)
+# - Luego elimina todos los .wav a 48 kHz y limpia symlinks rotos
+#
+# Uso:
+#   ./install.sh            # descarga (si procede) + limpia 48 kHz
+#   ./install.sh --reset    # borra datasets/chime antes de descargar + limpiar
+#
+# Variables opcionales:
+#   DATA_ROOT=/ruta/personalizada   # por defecto: <repo>/datasets
+# -----------------------------------------------------------------------------
 
-echo ">>> Creando/activando entorno conda: $ENV_NAME (Python $PY_VER)"
-if ! conda env list | awk '{print $1}' | grep -qx "$ENV_NAME"; then
-  conda create -y -n "$ENV_NAME" "python=$PY_VER"
-fi
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DATA_ROOT="${DATA_ROOT:-"$ROOT_DIR/datasets"}"
+CHIME_DIR="$DATA_ROOT/chime"
 
-# usa conda run para no depender de un 'conda activate' dentro del script
-echo ">>> Actualizando pip"
-conda run -n "$ENV_NAME" python -m pip install -U pip
+log() { printf "\n[%s] %s\n" "$(date +'%H:%M:%S')" "$*"; }
 
-echo ">>> Instalando PyTorch desde el índice oficial (${TORCH_INDEX_URL})"
-conda run -n "$ENV_NAME" pip install --index-url "$TORCH_INDEX_URL" torch torchaudio torchvision
+maybe_download() {
+  # Si tu repo ya tiene un paso de descarga, se detecta y ejecuta.
+  # Añade aquí tu flujo real si quieres forzar uno concreto.
+  if [[ -x "$ROOT_DIR/scripts/download_chime.sh" ]]; then
+    log "Descargando CHIME con scripts/download_chime.sh..."
+    bash "$ROOT_DIR/scripts/download_chime.sh"
+  elif [[ -f "$ROOT_DIR/scripts/download_chime.py" ]]; then
+    log "Descargando CHIME con scripts/download_chime.py..."
+    python "$ROOT_DIR/scripts/download_chime.py"
+  elif [[ -f "$ROOT_DIR/install_datasets.sh" ]]; then
+    log "Ejecutando install_datasets.sh..."
+    bash "$ROOT_DIR/install_datasets.sh"
+  else
+    log "No se detectó script de descarga. Si ya tienes el dataset, sigo con limpieza."
+  fi
+}
 
-echo ">>> Instalando dependencias del proyecto"
-# Nota: requirements.txt NO debe contener torch/torchaudio/torchvision
-conda run -n "$ENV_NAME" pip install -r requirements.txt
+reset_if_requested() {
+  if [[ "${1:-}" == "--reset" ]]; then
+    log "Eliminando $CHIME_DIR para reinstalar desde cero..."
+    rm -rf "$CHIME_DIR"
+  fi
+}
 
-# webrtcvad: usamos ruedas precompiladas (si ya está, no hace nada)
-conda run -n "$ENV_NAME" python - <<'PY'
+prune_48khz() {
+  log "Eliminando .wav a 48 kHz bajo $DATA_ROOT (mantener solo 16 kHz)..."
+  python - <<'PY'
+import os, sys, glob
+from pathlib import Path
 try:
-    import webrtcvad  # puede venir como 'webrtcvad-wheels'
-    print("webrtcvad OK:", webrtcvad.__name__)
+    import soundfile as sf
 except Exception as e:
-    print("Instalando webrtcvad-wheels…", e)
-    import subprocess, sys
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "webrtcvad-wheels>=2.0.10"])
+    print(f"[ERROR] Necesito 'soundfile' (pysoundfile). Instálalo con: pip install soundfile")
+    sys.exit(1)
+
+DATA_ROOT = Path(os.environ.get("DATA_ROOT", Path(__file__).resolve().parent / "datasets")).resolve()
+patterns = [str(DATA_ROOT / "**" / "*.wav")]
+removed = kept = errs = 0
+for pat in patterns:
+    for p in glob.glob(pat, recursive=True):
+        path = Path(p)
+        try:
+            info = sf.info(str(path))
+            if info.samplerate == 48000:
+                # Borrar enlace simbólico o archivo real
+                path.unlink()
+                removed += 1
+            else:
+                kept += 1
+        except Exception as e:
+            print(f"[WARN] No pude leer {path}: {e}")
+            errs += 1
+
+print(f"[OK] Borrados 48 kHz: {removed}  | Conservados: {kept}  | Avisos: {errs}")
 PY
 
-# Crear activador para el usuario
-echo ">>> Creando activate_vad.sh"
-cat > activate_vad.sh <<'BASH'
-#!/usr/bin/env bash
-conda activate ENV_NAME_PLACEHOLDER
-export PYTHONPATH="$(pwd):${PYTHONPATH:-}"
-echo "VAD-Benchmark environment activated: $(python -V)"
-BASH
-sed -i "s|ENV_NAME_PLACEHOLDER|$ENV_NAME|g" activate_vad.sh
-chmod +x activate_vad.sh
+  # Limpiar symlinks rotos que hayan quedado
+  log "Limpiando symlinks rotos..."
+  find -L "$DATA_ROOT" -type l -xtype l -print -delete || true
+}
 
-# Resumen final
-echo
-echo "✅ Instalación completada (sin datasets). Siguientes pasos:"
-echo "1) source activate_vad.sh"
-echo "2) Opcional: enlaza datasets/modelos existentes con symlinks para evitar descargas."
-echo "   - ln -s /ruta/antigua/models models"
-echo "   - ln -s /ruta/antigua/datasets/chime datasets/chime"
-echo "3) python test_installation.py"
-echo "4) python scripts/run_evaluation.py --config configs/config_demo.yaml"
+main() {
+  reset_if_requested "${1:-}"
+  mkdir -p "$CHIME_DIR"
+  maybe_download
+  prune_48khz
+  log "Instalación/limpieza finalizada."
+}
+
+main "$@"
