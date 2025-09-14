@@ -193,7 +193,7 @@ class VADEvaluator:
                     self.logger.info(f"❌ {gt_file} → Not found")
                 
                 # Stop when we have enough files
-                if len(found_files) >= max_files:
+                if len(found_files) >= max_files and max_files > 0:
                     break
             
             if found_files:
@@ -227,7 +227,7 @@ class VADEvaluator:
                 audio_files.extend(files)
                 break
         
-        limited_files = sorted(audio_files)[:max_files]
+        limited_files = sorted(audio_files) if max_files == 0 else sorted(audio_files)[:max_files]
         self.logger.info(f"📊 Fallback: {len(audio_files)} files found, using {len(limited_files)}")
         
         return limited_files

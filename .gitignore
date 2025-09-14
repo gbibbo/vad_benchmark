@@ -57,3 +57,10 @@ artifacts/
 chime_home.tar.gz
 /analysis/data/Figures/*_bars_*.png
 /analysis/data/Figures/*_bars_*.png
+# AVA-Speech data files (exclude from repo)
+datasets/ava/raw/
+datasets/ava/wav16k/
+datasets/ava/chunks_ALL/
+results/masks_*/
+results/*.png
+results/*.log

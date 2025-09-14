@@ -1,0 +1,38 @@
+{
+  "timestamp": "2025-09-14T18:46:17.921858",
+  "args": {
+    "labels": "datasets/ava/metadata/ava_speech_labels_v1.csv",
+    "wav16k_dir": "datasets/ava/wav16k",
+    "chunks_dir": "datasets/ava/chunks_ALL",
+    "gt_cmf": "ground_truth/ava/cmf.csv",
+    "gt_cmfv": "ground_truth/ava/cmfv.csv",
+    "window_sec": 4.0,
+    "hop_sec": 4.0,
+    "min_positive_sec": 0.5,
+    "videos_subset": "datasets/ava/metadata/available_videos.txt"
+  },
+  "stats": {
+    "videos_processed": 19,
+    "total_chunks": 4275,
+    "cmf_positive": 2145,
+    "cmfv_positive": 2713
+  },
+  "label_mappings": {
+    "CMF_POSITIVE": [
+      "SPEECH_WITH_NOISE",
+      "CLEAN_SPEECH"
+    ],
+    "CMF_NEGATIVE": [
+      "NO_SPEECH",
+      "SPEECH_WITH_MUSIC"
+    ],
+    "CMFV_POSITIVE": [
+      "CLEAN_SPEECH",
+      "SPEECH_WITH_NOISE",
+      "SPEECH_WITH_MUSIC"
+    ],
+    "CMFV_NEGATIVE": [
+      "NO_SPEECH"
+    ]
+  }
+}
