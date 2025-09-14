@@ -284,3 +284,17 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 **Repository**: https://github.com/gbibbo/vad_benchmark  
 **Paper**: DCASE 2025 Conference Proceedings
+
+### 2. Results Location
+- Individual metrics: `results/metrics_[model].json`
+- **FPR/FNR summaries**: `results/summary_fpr_fnr_{cmf|cmfv}.csv` — per-model confusion matrix with tp,fp,tn,fn,fpr,fnr,precision,recall,f1,accuracy
+- Comparison plots: `results/comparison_all_models.png`
+- Logs: `results/evaluation_[timestamp].log`
+
+### 3. FPR/FNR Analysis
+```bash
+# Generate FPR/FNR bar charts after evaluation
+python analysis/scripts/make_fpr_fnr_bars.py
+# Output: analysis/data/Figures/{fpr,fnr}_bars_{cmf,cmfv}.png
+```
+

@@ -55,3 +55,5 @@ runs/
 outputs/
 artifacts/
 chime_home.tar.gz
+/analysis/data/Figures/*_bars_*.png
+/analysis/data/Figures/*_bars_*.png
