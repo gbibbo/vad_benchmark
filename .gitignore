@@ -64,3 +64,12 @@ datasets/ava/chunks_ALL/
 results/masks_*/
 results/*.png
 results/*.log
+
+# AVA-Speech data files (exclude from repo)
+datasets/ava/raw/
+datasets/ava/wav16k/
+datasets/ava/chunks_ALL/
+results/masks_*/
+results/*.png
+results/*.log
+results/evaluation_*.log
