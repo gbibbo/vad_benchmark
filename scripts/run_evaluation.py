@@ -1,4 +1,4 @@
-#!/usr/-bin/env python3
+#!/usr/bin/env python3
 import os, sys
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if _ROOT not in sys.path: sys.path.insert(0, _ROOT)
@@ -10,20 +10,10 @@ if 'models' in sys.modules and not getattr(sys.modules['models'], '__path__', No
 # --- end hygiene ---
 """!
 @file run_evaluation.py
-@brief Master script for the complete evaluation of VAD models.
+@brief Master script for the complete evaluation of VAD models with FPR/FNR metrics.
 
-@section workflow Workflow
-1.  Check if previous inference results exist.
-2.  If not, run inference on N examples (prototype).
-3.  Evaluate against ground truth with detailed printouts.
-4.  Save metrics and generate plots.
-5.  Provide a final comparative summary.
-
-@section usage Usage
-@code
-python scripts/run_evaluation.py --config config_test.yaml --mode prototype
-python scripts/run_evaluation.py --config config_full.yaml --mode full
-@endcode
+Enhanced version that includes False Positive Rate (FPR) and False Negative Rate (FNR)
+calculations at the optimal operating point (maximum F1-score).
 """
 
 import sys
@@ -38,6 +28,7 @@ import pandas as pd
 import glob
 import json
 import time
+import csv
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 import matplotlib.pyplot as plt
@@ -48,16 +39,20 @@ from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Import our new confusion matrix module
+from src.metrics.confusion import from_binary as cm_from_binary, from_scores as cm_from_scores
+
 class VADEvaluator:
-    """! @brief Master evaluator for VAD models. """
+    """! @brief Master evaluator for VAD models with FPR/FNR support. """
     
     def __init__(self, config_path: str, verbose: bool = True):
         """!
-        @brief Initializes the VADEvaluator.
+        @brief Initializes the VADEvaluator with enhanced metrics.
         @param config_path Path to the YAML configuration file.
         @param verbose If True, enables detailed logging to the console.
         """
         self.config = self._load_config(config_path)
+        self.config_path = config_path  # Store for scenario detection
         self.verbose = verbose
         self.base_path = Path(self.config['project']['base_path'])
         self.results_dir = self.base_path / 'results'
@@ -93,7 +88,38 @@ class VADEvaluator:
         )
         
         self.logger = logging.getLogger(__name__)
-        self.logger.info(f"🚀 Starting VAD evaluation - Log: {log_file}")
+        self.logger.info(f"🚀 Starting VAD evaluation with FPR/FNR - Log: {log_file}")
+
+    def _append_fpr_fnr_summary(self, summary_csv_path, row_dict):
+        """Append FPR/FNR metrics to summary CSV."""
+        write_header = not os.path.exists(summary_csv_path)
+        fieldnames = ["scenario", "model", "op_name", "threshold",
+                      "tp", "fp", "tn", "fn", "fpr", "fnr", 
+                      "precision", "recall", "f1", "accuracy"]
+        
+        with open(summary_csv_path, "a", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=fieldnames)
+            if write_header:
+                w.writeheader()
+            w.writerow({k: row_dict.get(k, "") for k in fieldnames})
+    
+    def _get_scenario_name(self) -> str:
+        """Extract scenario name from config path."""
+        config_filename = os.path.basename(self.config_path).lower()
+        
+        if 'cmf' in config_filename and 'cmfv' not in config_filename:
+            return 'cmf'
+        elif 'cmfv' in config_filename:
+            return 'cmfv'
+        else:
+            # Try to infer from dataset names
+            datasets = self.config.get('datasets') or self.config.get('scenarios', {})
+            for dataset_name in datasets.keys():
+                if 'cmf' in dataset_name.lower() and 'cmfv' not in dataset_name.lower():
+                    return 'cmf'
+                elif 'cmfv' in dataset_name.lower():
+                    return 'cmfv'
+            return 'unknown'
     
     def _get_audio_files_limited(self, dataset_config: dict, max_files: int) -> List[str]:
         """!
@@ -441,7 +467,7 @@ class VADEvaluator:
     
     def _evaluate_model(self, model_name: str, gt_df: pd.DataFrame) -> Dict:
         """!
-        @brief Evaluates a model's predictions against the ground truth.
+        @brief Evaluates a model's predictions against the ground truth with enhanced FPR/FNR metrics.
         @param model_name The name of the model.
         @param gt_df The pandas DataFrame containing the ground truth.
         @return A dictionary containing evaluation metrics (precision, recall, f1, etc.).
@@ -464,8 +490,11 @@ class VADEvaluator:
             'predictions': {},  # For debugging
         }
         
-        # 🔧 FIXED: Match counter for debugging
-        total_matches = 0
+        # Track best F1 threshold for FPR/FNR calculation
+        best_f1_threshold = None
+        best_f1_value = 0.0
+        best_threshold_data = None
+        matches_count = 0
         
         for mask_file in mask_files:
             # Extract threshold from the filename
@@ -496,7 +525,7 @@ class VADEvaluator:
             
             pred_df['Filename_norm'] = pred_df['Filename'].apply(normalize_prediction_filename)
             
-            # 🔧 FIXED: Debug the matching process
+            # Debug the matching process
             if threshold == 0.5 and self.verbose:  # Only for the main threshold
                 self.logger.info(f"🔍 Debugging match process for threshold {threshold}:")
                 self.logger.info(f"   GT has {len(gt_df)} files")
@@ -510,7 +539,6 @@ class VADEvaluator:
                 continue
             else:
                 matches_count = len(merged)
-                total_matches += matches_count
                 if threshold == 0.5:  # Log only for the main threshold
                     self.logger.info(f"✅ {matches_count} matches found for threshold {threshold}")
             
@@ -529,13 +557,59 @@ class VADEvaluator:
             results['f1'].append(f1)
             results['accuracy'].append(accuracy)
             
+            # Track best F1 threshold for FPR/FNR calculation
+            if f1 > best_f1_value:
+                best_f1_value = f1
+                best_f1_threshold = threshold
+                best_threshold_data = (y_true, y_pred)
+            
             # Save some predictions for debugging
             if threshold == 0.5:  # Only for the main threshold
                 results['predictions'][threshold] = merged[['Filename_norm', 'Label', 'Speech']].to_dict('records')
         
-        # 🔧 FIXED: Log a summary of matches
-        if total_matches > 0:
-            self.logger.info(f"📈 Total matches found: {total_matches} (across all thresholds)")
+        # === START: FPR/FNR block (OP-Balance = F1 max) ===
+        if best_threshold_data is not None:
+            y_true_best, y_pred_best = best_threshold_data
+            
+            # Calculate confusion matrix metrics
+            cm = cm_from_binary(y_true_best, y_pred_best)
+            
+            # Determine operation point name
+            is_binary = self._is_binary_model(model_name)
+            op_name = "Binary" if is_binary else "OP-Balance"
+            threshold_used = "" if is_binary else float(best_f1_threshold)
+            
+            # Add confusion matrix to results
+            results['confusion'] = {
+                "tp": cm.tp, "fp": cm.fp, "tn": cm.tn, "fn": cm.fn,
+                "fpr": cm.fpr, "fnr": cm.fnr, "precision": cm.precision,
+                "recall": cm.recall, "f1": cm.f1, "accuracy": cm.accuracy,
+                "op_name": op_name, "threshold": threshold_used,
+            }
+            
+            # Get scenario name and write to summary CSV
+            scenario = self._get_scenario_name()
+            summary_csv = self.results_dir / f"summary_fpr_fnr_{scenario}.csv"
+            
+            self._append_fpr_fnr_summary(summary_csv, {
+                "scenario": scenario,
+                "model": model_name,
+                "op_name": op_name,
+                "threshold": threshold_used,
+                "tp": cm.tp, "fp": cm.fp, "tn": cm.tn, "fn": cm.fn,
+                "fpr": cm.fpr, "fnr": cm.fnr,
+                "precision": cm.precision, "recall": cm.recall,
+                "f1": cm.f1, "accuracy": cm.accuracy
+            })
+            
+            self.logger.info(f"📊 FPR/FNR metrics saved for {model_name}")
+            self.logger.info(f"   TP={cm.tp}, FP={cm.fp}, TN={cm.tn}, FN={cm.fn}")
+            self.logger.info(f"   FPR={cm.fpr:.3f}, FNR={cm.fnr:.3f}")
+        # === END: FPR/FNR block ===
+        
+        # Log summary of matches
+        if matches_count > 0:
+            self.logger.info(f"📈 Total matches found: {matches_count} (across all thresholds)")
         else:
             self.logger.warning(f"⚠️ NO matches were found for any threshold")
         
@@ -593,7 +667,7 @@ class VADEvaluator:
         @brief Generates performance plots for a model.
         @param model_name The name of the model.
         @param results A dictionary with the evaluation results.
-        """
+"""
         if not results.get('thresholds'):
             return
             
@@ -699,6 +773,20 @@ class VADEvaluator:
                            f"{best_precision:<15.3f} {best_recall:<12.3f}")
         
         self.logger.info("="*80)
+        
+        # Print FPR/FNR summary if available
+        self.logger.info(f"\n🎯 FPR/FNR SUMMARY")
+        self.logger.info("="*60)
+        self.logger.info(f"{'Model':<15} {'FPR':<8} {'FNR':<8} {'TP':<6} {'FP':<6} {'TN':<6} {'FN':<6}")
+        self.logger.info("-"*60)
+        
+        for model_name, results in self.all_results.items():
+            if 'confusion' in results:
+                cm = results['confusion']
+                self.logger.info(f"{model_name.upper():<15} {cm['fpr']:<8.3f} {cm['fnr']:<8.3f} "
+                               f"{cm['tp']:<6} {cm['fp']:<6} {cm['tn']:<6} {cm['fn']:<6}")
+        
+        self.logger.info("="*60)
     
     def run_evaluation(self):
         """! @brief Executes the complete evaluation workflow. """
@@ -802,7 +890,7 @@ def main():
     """
     import argparse
     
-    parser = argparse.ArgumentParser(description='Complete evaluation of VAD models')
+    parser = argparse.ArgumentParser(description='Complete evaluation of VAD models with FPR/FNR metrics')
     parser.add_argument('--config', default='config_test.yaml', 
                        help='YAML configuration file')
     parser.add_argument('--verbose', action='store_true', 
