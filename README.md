@@ -5,7 +5,7 @@ This repository contains code and evaluation tools for the paper:
 **"Privacy-Preserving Voice Activity Detection: Evaluating AI Model Performance on Domestic Audio"**  
 *Gabriel Bibbo, Arshdeep Singh, Mark D. Plumbley*  
 Centre for Vision Speech & Signal Processing (CVSSP), University of Surrey, UK  
-Detection and Classification of Acoustic Scenes and Events (DCASE) 2025
+2026 IEEE International Conference on Acoustics, Speech, and Signal Processing
 
 ## Requisitos
 - Python **3.10** (recomendado con conda)
