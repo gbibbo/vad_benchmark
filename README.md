@@ -270,7 +270,7 @@ The installer handles all dependencies including PyTorch (CPU version for stabil
 @inproceedings{bibbo2025privacy,
   title={Privacy-Preserving Voice Activity Detection: Evaluating AI Model Performance on Domestic Audio},
   author={Bibbo, Gabriel and Singh, Arshdeep and Plumbley, Mark D.},
-  booktitle={Detection and Classification of Acoustic Scenes and Events 2025},
+  booktitle={2026 IEEE International Conference on Acoustics, Speech, and Signal Processing},
   year={2025},
   address={Barcelona, Spain}
 }
@@ -283,4 +283,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 **Repository**: https://github.com/gbibbo/vad_benchmark  
-**Paper**: DCASE 2025 Conference Proceedings
+**Paper**: 2026 IEEE International Conference on Acoustics, Speech, and Signal Processing Conference Proceedings
