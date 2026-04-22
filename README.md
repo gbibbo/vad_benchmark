@@ -7,31 +7,31 @@ This repository contains code and evaluation tools for the paper:
 Centre for Vision Speech & Signal Processing (CVSSP), University of Surrey, UK  
 2026 IEEE International Conference on Acoustics, Speech, and Signal Processing
 
-## Requisitos
-- Python **3.10** (recomendado con conda)
-- PyTorch instalado **según tu plataforma** (CPU por defecto) usando el índice oficial de PyTorch  
-- Resto de dependencias vía `requirements.txt`
+## Requirements
+- Python **3.10** (recommended with conda)
+- PyTorch installed **according to your platform** (CPU by default) using the official PyTorch index
+- Remaining dependencies via `requirements.txt`
 
-> PyTorch se instala desde su índice oficial (CPU/CUDA/ROCm). No fijamos PyTorch en `requirements.txt` para evitar incompatibilidades entre plataformas.
+> PyTorch is installed from its official index (CPU/CUDA/ROCm). We do not pin PyTorch in `requirements.txt` to avoid cross-platform incompatibilities.
 
-## Instalación rápida (automática)
+## Quick Installation (Automatic)
 ```bash
 git clone https://github.com/gbibbo/vad_benchmark.git
 cd vad_benchmark
 chmod +x install.sh
-./install.sh              # crea el entorno py310 e instala deps (no descarga datasets)
-source activate_vad.sh    # activa el entorno y exporta PYTHONPATH
+./install.sh              # creates the py310 environment and installs dependencies (does not download datasets)
+source activate_vad.sh    # activates the environment and exports PYTHONPATH
 python test_installation.py
 ```
 
-## (Opcional) Reusar datasets y modelos ya descargados
-Si ya tienes carpetas grandes (p.ej. `datasets/chime` o `models/`), puedes **reutilizarlas** para evitar descargas:
+## (Optional) Reuse Previously Downloaded Datasets and Models
+If you already have large folders (for example, `datasets/chime` or `models/`), you can **reuse them** to avoid downloading them again:
 
 ```bash
-# desde la raíz del repo nuevo
-ln -s /ruta/a/tu/otro/repo/models models               # reutiliza pesos/modelos
+# from the root of the new repo
+ln -s /path/to/your/other/repo/models models                  # reuse weights/models
 mkdir -p datasets
-ln -s /ruta/a/tu/otro/repo/datasets/chime datasets/chime  # reutiliza CHiME (~3.9GB)
+ln -s /path/to/your/other/repo/datasets/chime datasets/chime  # reuse CHiME (~3.9GB)
 ```
 
 ### Manual Installation (Alternative)
@@ -44,15 +44,15 @@ Install PyTorch according to your platform (official guide):
 pip install --index-url https://download.pytorch.org/whl/cpu torch torchaudio torchvision
 ```
 
-#### 2. Install remaining dependencies
+#### 2. Install Remaining Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-> **Note**: If `soundfile` gives an error about `libsndfile`, check the official documentation; on some distributions you may need to install `libsndfile` from your system package manager.
+> **Note**: If `soundfile` raises an error about `libsndfile`, check the official documentation. On some distributions, you may need to install `libsndfile` using your system package manager.
 
-#### 3. Test installation
+#### 3. Test Installation
 
 ```bash
 python test_installation.py
@@ -60,12 +60,12 @@ python test_installation.py
 
 ## Quick Start
 
-## Ejecutar demos/experimentos
+## Run Demos/Experiments
 ```bash
-# demo corto
+# short demo
 python scripts/run_evaluation.py --config configs/config_demo.yaml
 
-# escenarios del paper (CMF / CMFV)
+# paper scenarios (CMF / CMFV)
 python scripts/run_evaluation.py --config configs/config_chime_cmf.yaml
 python scripts/run_evaluation.py --config configs/config_chime_cmfv.yaml
 ```
@@ -74,11 +74,11 @@ python scripts/run_evaluation.py --config configs/config_chime_cmfv.yaml
 
 To reproduce the exact paper results, you need the CHiME-Home dataset:
 
-### 1. Download CHiME-Home Dataset
+### 1. Download the CHiME-Home Dataset
 
 Get the CHiME-Home dataset from the CHiME Challenge website:
 
-## Descargar CHiME (solo si no lo tienes)
+## Download CHiME (only if you do not already have it)
 ```bash
 chmod +x download_chime.sh
 ./download_chime.sh
@@ -90,8 +90,8 @@ Or manually:
 mkdir -p datasets/chime/chunks
 
 # Download CHiME-Home dataset
-# Visit: https://www.chimehome.org/ 
-# Or use the direct download link from CHiME organizers
+# Visit: https://www.chimehome.org/
+# Or use the direct download link from the CHiME organizers
 # Extract audio files to: datasets/chime/chunks/
 
 # Expected structure:
@@ -102,15 +102,15 @@ mkdir -p datasets/chime/chunks
 # └── [additional 4-second audio chunks at 16kHz]
 ```
 
-### 2. Alternative: Use Download Script
+### 2. Alternative: Use the Download Script
 
 If available, you can use the provided download script:
 
 ```bash
-# Make download script executable
+# Make the download script executable
 chmod +x download_chime.sh
 
-# Download dataset automatically
+# Download the dataset automatically
 ./download_chime.sh
 
 # Verify dataset structure
@@ -129,10 +129,10 @@ ls -la datasets/chime/chunks/ | head -10
 
 ### 1. Run Paper Evaluations
 ```bash
-# Human speech detection (CMF scenario) - Table results from paper
+# Human speech detection (CMF scenario) - Table results from the paper
 python scripts/run_evaluation.py --config configs/config_chime_cmf.yaml
 
-# Broad vocal content detection (CMFV scenario)  
+# Broad vocal content detection (CMFV scenario)
 python scripts/run_evaluation.py --config configs/config_chime_cmfv.yaml
 
 # Run all models on both scenarios
@@ -153,17 +153,17 @@ The evaluation results show clear patterns in VAD model behavior:
 ![F1 Score and ROC Curves](F1_ROC_combined.png)
 
 **What the results tell us:**
-- **CMF Scenario** (detecting human speech): PaSST and AST models work best (F1 = 0.86)
+- **CMF Scenario** (detecting human speech): PaSST and AST models perform best (F1 = 0.86)
 - **CMFV Scenario** (detecting any vocal content): Most models reach F1 = 0.97, making this task easier
-- **ROC Curves** show model trade-offs between catching true speech vs avoiding false alarms
+- **ROC Curves** show model trade-offs between detecting true speech and avoiding false alarms
 - **Threshold sensitivity** varies greatly between models
 
 ![Parameter Count vs F1 Score](parameter_count_performance.png)
 
 **Model efficiency patterns:**
-- **Small models** (Silero, WebRTC) offer good value: decent F1 scores with tiny memory footprint
-- **Large models** (80M+ parameters) give the best F1 scores but cost much more memory
-- **Sweet spot** appears around 24M parameters (EPANNs) for balanced efficiency
+- **Small models** (Silero, WebRTC) offer good value: decent F1 scores with a tiny memory footprint
+- **Large models** (80M+ parameters) provide the best F1 scores but require much more memory
+- **The sweet spot** appears to be around 24M parameters (EPANNs) for balanced efficiency
 
 ## VAD Models Tested
 
@@ -175,19 +175,19 @@ The framework tests 8 VAD models across 4 families:
 | **AudioSet Pre-trained** | PANNs, EPANNs, AST, PaSST | 0.848, 0.847, 0.860, 0.861 |
 | **Speech Recognition** | Whisper-Tiny, Whisper-Small | 0.668, 0.654 |
 
-*Results for CMF scenario (human speech detection)*
+*Results for the CMF scenario (human speech detection)*
 
 ## Run Your Own Tests
 
-This repository includes scripts for deep dive evaluation:
+This repository includes scripts for in-depth evaluation:
 
 ### 1. Run Tests
 
 ```bash
-# Go to test scripts
+# Go to the test scripts
 cd analysis/scripts/
 
-# Run complete VAD tests  
+# Run complete VAD tests
 python analyze_vad_results.py
 
 # Run parameter count vs F1 tests
@@ -217,36 +217,36 @@ analysis/data/Figures/
 ### 3. What You Get
 
 - **Side-by-side comparisons**: CMF vs CMFV scenario results
-- **Speed tests**: Real-Time Factor (RTF) vs F1-score relationships  
-- **Efficiency tests**: Parameter count vs F1 score trade-offs
+- **Speed tests**: Real-Time Factor (RTF) vs F1-score relationships
+- **Efficiency tests**: Parameter count vs F1-score trade-offs
 - **Threshold tests**: How models behave across different VAD thresholds
 - **ROC/PR Curves**: Detailed classification metrics
 
-## Notas de compatibilidad
-- `webrtcvad` se instala como **`webrtcvad-wheels`** para usar ruedas precompiladas (sin compilar C).  
-- `soundfile` usa **libsndfile**; en algunos sistemas esta librería del SO puede ser necesaria.
+## Compatibility Notes
+- `webrtcvad` is installed as **`webrtcvad-wheels`** to use precompiled wheels (without compiling C code).
+- `soundfile` uses **libsndfile**. On some systems, this OS-level library may be required.
 
 ## Project Structure
 
 ```
 vad_benchmark/
 ├── install.sh                    # Automatic installer
-├── configs/                     # Evaluation setups
-│   ├── config_demo.yaml           # Demo with test data
-│   ├── config_chime_cmf.yaml      # Paper: Human speech scenario
-│   └── config_chime_cmfv.yaml     # Paper: Broad vocal content
-├── analysis/                    # Test suite
-│   ├── scripts/                   # Test scripts
+├── configs/                      # Evaluation setups
+│   ├── config_demo.yaml          # Demo with test data
+│   ├── config_chime_cmf.yaml     # Paper: Human speech scenario
+│   └── config_chime_cmfv.yaml    # Paper: Broad vocal content
+├── analysis/                     # Test suite
+│   ├── scripts/                  # Test scripts
 │   ├── data/                     # Results and ground truth data
 │   └── figures/                  # Generated plots and figures
-├── ground_truth/               # Paper ground truth annotations  
-│   └── chime/                 # CHiME-Home labels (CMF/CMFV)
-├── datasets/                   # Dataset directory
-│   └── chime/chunks/           # CHiME-Home audio files (download required)
-├── src/wrappers/              # VAD model code
-├── scripts/                   # Evaluation scripts
-├── models/                    # Downloaded model weights
-└── results/                   # Output metrics and plots
+├── ground_truth/                 # Paper ground truth annotations
+│   └── chime/                    # CHiME-Home labels (CMF/CMFV)
+├── datasets/                     # Dataset directory
+│   └── chime/chunks/             # CHiME-Home audio files (download required)
+├── src/wrappers/                 # VAD model code
+├── scripts/                      # Evaluation scripts
+├── models/                       # Downloaded model weights
+└── results/                      # Output metrics and plots
 ```
 
 ## System Requirements
@@ -256,7 +256,7 @@ vad_benchmark/
 - **Memory**: 4GB RAM recommended
 - **OS**: Linux, macOS, Windows (WSL supported)
 
-The installer handles all dependencies including PyTorch (CPU version for stability).
+The installer handles all dependencies, including PyTorch (CPU version for stability).
 
 ## Troubleshooting
 
@@ -278,9 +278,10 @@ The installer handles all dependencies including PyTorch (CPU version for stabil
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Repository**: https://github.com/gbibbo/vad_benchmark  
+**Repository**: https://github.com/gbibbo/vad_benchmark
 **Paper**: 2026 IEEE International Conference on Acoustics, Speech, and Signal Processing Conference Proceedings
+
