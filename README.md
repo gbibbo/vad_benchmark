@@ -1,11 +1,11 @@
 # VAD-Benchmark: Voice Activity Detection Evaluation Framework
 
-This repository contains code and evaluation tools for the paper:
+This repository contains code and evaluation tools for the unpublished research manuscript:
 
 **"Privacy-Preserving Voice Activity Detection: Evaluating AI Model Performance on Domestic Audio"**  
 *Gabriel Bibbo, Arshdeep Singh, Mark D. Plumbley*  
 Centre for Vision Speech & Signal Processing (CVSSP), University of Surrey, UK  
-2026 IEEE International Conference on Acoustics, Speech, and Signal Processing
+Unpublished manuscript (2025)
 
 ## Requirements
 - Python **3.10** (recommended with conda)
@@ -267,12 +267,11 @@ The installer handles all dependencies, including PyTorch (CPU version for stabi
 ## Citation
 
 ```bibtex
-@inproceedings{bibbo2025privacy,
+@unpublished{bibbo2025privacy,
   title={Privacy-Preserving Voice Activity Detection: Evaluating AI Model Performance on Domestic Audio},
   author={Bibbo, Gabriel and Singh, Arshdeep and Plumbley, Mark D.},
-  booktitle={2026 IEEE International Conference on Acoustics, Speech, and Signal Processing},
   year={2025},
-  address={Barcelona, Spain}
+  note={Unpublished manuscript}
 }
 ```
 
@@ -283,5 +282,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 **Repository**: https://github.com/gbibbo/vad_benchmark
-**Paper**: 2026 IEEE International Conference on Acoustics, Speech, and Signal Processing Conference Proceedings
+**Manuscript status**: Unpublished
 
